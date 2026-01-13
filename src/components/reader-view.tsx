@@ -2,27 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  List, 
-  Home, 
-  Settings, 
-  Minus, 
-  Plus,
-  Type
-} from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 interface ReaderViewProps {
@@ -36,8 +17,11 @@ interface ReaderViewProps {
       title: string
     }
   }
-  prevChapterId?: string
-  nextChapterId?: string
+  chapters: Array<{
+    id: string
+    title: string
+    order: number
+  }>
 }
 
 const THEMES = [
@@ -46,182 +30,450 @@ const THEMES = [
   { name: "dark", label: "夜间", bg: "bg-zinc-950", text: "text-zinc-300" },
 ]
 
-export function ReaderView({ chapter, prevChapterId, nextChapterId }: ReaderViewProps) {
+export function ReaderView({ chapter, chapters }: ReaderViewProps) {
+  const router = useRouter()
   const { resolvedTheme } = useTheme()
   const [fontSize, setFontSize] = React.useState(18)
   const [theme, setTheme] = React.useState("light")
   const [mounted, setMounted] = React.useState(false)
+  const [isLoadingNext, setIsLoadingNext] = React.useState(false)
+  const [hasMore, setHasMore] = React.useState(true)
+  const [activeChapterId, setActiveChapterId] = React.useState(chapter.id)
+  
+  // Refs for scrolling and sync
+  const contentScrollRef = React.useRef<HTMLDivElement | null>(null)
+  const chapterNavRef = React.useRef<HTMLDivElement | null>(null)
+  const loadMoreRef = React.useRef<HTMLDivElement | null>(null)
+  const loadPrevRef = React.useRef<HTMLDivElement | null>(null)
+  
+  // Logic refs
+  const isLoadingNextRef = React.useRef(false)
+  const isLoadingPrevRef = React.useRef(false)
+  const hasMoreRef = React.useRef(true)
+  const hasPrevRef = React.useRef(true)
+  const lastChapterIdRef = React.useRef(chapter.id)
+  const firstChapterIdRef = React.useRef(chapter.id)
+  const headingElsRef = React.useRef(new Map<string, HTMLElement>())
+  
+  // Sync control refs
+  const isSyncingNavRef = React.useRef(false)
+  const isSyncingContentRef = React.useRef(false)
+  const syncTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
-  // Load settings from localStorage
+  const [loadedChapters, setLoadedChapters] = React.useState<Array<{
+    id: string
+    title: string
+    content: string
+    order: number
+  }>>([{ id: chapter.id, title: chapter.title, content: chapter.content, order: chapter.order }])
+
+  // Constants for Chapter Tree
+  const TREE_ITEM_HEIGHT = 32
+  const TREE_VISIBLE_ITEMS = 9 // 1 faded + 7 active + 1 faded
+  const TREE_HEIGHT = TREE_ITEM_HEIGHT * TREE_VISIBLE_ITEMS
+
+  // Load settings
   React.useEffect(() => {
     setMounted(true)
     const savedSize = localStorage.getItem("reader-font-size")
     const savedTheme = localStorage.getItem("reader-theme")
-    
+
     if (savedSize) setFontSize(parseInt(savedSize))
-    
+
     if (savedTheme) {
       setTheme(savedTheme)
-    } else if (resolvedTheme === 'dark') {
-      setTheme('dark')
+    } else if (resolvedTheme === "dark") {
+      setTheme("dark")
     }
   }, [resolvedTheme])
 
-  // Save settings
-  const updateFontSize = (newSize: number) => {
-    const size = Math.min(Math.max(newSize, 14), 32)
-    setFontSize(size)
-    localStorage.setItem("reader-font-size", size.toString())
-  }
-
-  const updateTheme = (newTheme: string) => {
-    setTheme(newTheme)
-    localStorage.setItem("reader-theme", newTheme)
-  }
+  // Lock body scroll
+  React.useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prevHtmlOverflow = html.style.overflow
+    const prevBodyOverflow = body.style.overflow
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    return () => {
+      html.style.overflow = prevHtmlOverflow
+      body.style.overflow = prevBodyOverflow
+    }
+  }, [])
 
   const currentTheme = THEMES.find(t => t.name === theme) || THEMES[0]
+  const loadedChapterIds = React.useMemo(
+    () => new Set(loadedChapters.map((c) => c.id)),
+    [loadedChapters]
+  )
+
+  // --- Synchronization Logic ---
+
+  // Scroll Tree to Active Chapter
+  const scrollTreeToActive = React.useCallback((id: string, smooth: boolean = true) => {
+    const nav = chapterNavRef.current
+    if (!nav) return
+
+    const target = nav.querySelector<HTMLElement>(`[data-chapter-nav-id="${id}"]`)
+    if (!target) return
+
+    const navRect = nav.getBoundingClientRect()
+    const targetTop = target.offsetTop
+    // Center the item: targetTop - (viewportHeight / 2) + (itemHeight / 2)
+    const scrollTop = targetTop - (navRect.height / 2) + (target.clientHeight / 2)
+
+    nav.scrollTo({
+      top: scrollTop,
+      behavior: smooth ? "smooth" : "auto"
+    })
+  }, [])
+
+  // 1. Sync: Content Scroll -> Update Active ID -> Scroll Tree
+  React.useEffect(() => {
+    const els = Array.from(headingElsRef.current.entries())
+      .map(([, el]) => el)
+      .filter(Boolean)
+    if (els.length === 0) return
+    const root = contentScrollRef.current
+    if (!root) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isSyncingContentRef.current) return // Ignore updates if we are scrolling content programmatically
+
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (visible.length === 0) return
+
+        // Find the topmost visible heading
+        let best: IntersectionObserverEntry | null = null
+        for (const e of visible) {
+          if (!best || e.boundingClientRect.top < best.boundingClientRect.top) {
+            best = e
+          }
+        }
+        
+        if (best) {
+          const id = (best.target as HTMLElement).dataset.chapterId
+          if (id && id !== activeChapterId) {
+             // We update state, but we need to mark that this update comes from scroll
+             // actually standard state update is fine, the useEffect on activeChapterId will handle tree scroll
+             setActiveChapterId(id)
+          }
+        }
+      },
+      { root, rootMargin: "-10% 0px -80% 0px", threshold: 0 }
+    )
+
+    for (const el of els) observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadedChapters, activeChapterId])
+
+  // 2. Effect: activeChapterId changed -> Scroll Tree & Update URL
+  React.useEffect(() => {
+    // Update URL without navigation (to avoid re-rendering/resetting state)
+    const newUrl = `/novel/${chapter.novel.id}/chapter/${activeChapterId}`
+    if (window.location.pathname !== newUrl) {
+      window.history.replaceState(null, "", newUrl)
+    }
+
+    if (isSyncingContentRef.current) return // If change was due to tree click, tree is already handling or we don't want to fight
+    
+    // If change came from content scroll (IntersectionObserver), we smooth scroll tree
+    // We use a flag to prevent circular dependency if tree scroll triggers something (it shouldn't)
+    isSyncingNavRef.current = true
+    scrollTreeToActive(activeChapterId, true)
+    
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+    syncTimeoutRef.current = setTimeout(() => {
+      isSyncingNavRef.current = false
+    }, 500)
+
+  }, [activeChapterId, scrollTreeToActive, chapter.novel.id])
+
+  // 3. Handle Tree Item Click
+  const handleChapterClick = (e: React.MouseEvent, id: string) => {
+    e.preventDefault() // Prevent default anchor jump
+    
+    // Update active state immediately
+    setActiveChapterId(id)
+    
+    // Scroll Tree to Center (Visual feedback)
+    scrollTreeToActive(id, true)
+
+    // Scroll Content
+    const heading = headingElsRef.current.get(id)
+    if (heading) {
+      isSyncingContentRef.current = true
+      heading.scrollIntoView({ behavior: "smooth", block: "start" })
+      
+      // Reset flag after animation
+      setTimeout(() => {
+        isSyncingContentRef.current = false
+      }, 1000)
+    } else {
+      // If not loaded, we might need to jump? 
+      // But for now let's assume we only click what's visible or handle it differently.
+      // If it's not in DOM, we might strictly need to navigate. 
+      // Ideally, the tree shows all chapters, but we only have content for some.
+      // If user clicks a far-away chapter, we MUST navigate.
+      const isLoaded = loadedChapters.some(c => c.id === id)
+      if (!isLoaded) {
+         router.push(`/novel/${chapter.novel.id}/chapter/${id}`)
+      }
+    }
+  }
+
+  // --- Infinite Scroll Logic (Preserved) ---
+  
+  React.useEffect(() => {
+    // Reset when chapter prop changes (initial load of new page)
+    setLoadedChapters([{ id: chapter.id, title: chapter.title, content: chapter.content, order: chapter.order }])
+    setHasMore(true)
+    hasMoreRef.current = true
+    hasPrevRef.current = true
+    lastChapterIdRef.current = chapter.id
+    firstChapterIdRef.current = chapter.id
+    isLoadingNextRef.current = false
+    setIsLoadingNext(false)
+    isLoadingPrevRef.current = false
+    
+    // Initial scroll to top
+    contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" })
+  }, [chapter.id, chapter.novel.id]) // minimal deps
+
+  // Update refs when loadedChapters change
+  React.useEffect(() => {
+    lastChapterIdRef.current = loadedChapters[loadedChapters.length - 1]?.id ?? chapter.id
+    firstChapterIdRef.current = loadedChapters[0]?.id ?? chapter.id
+  }, [loadedChapters, chapter.id])
+
+  const loadNextChapter = React.useCallback(async () => {
+    if (isLoadingNextRef.current || !hasMoreRef.current) return
+    const lastChapterId = lastChapterIdRef.current
+    if (!lastChapterId) return
+
+    isLoadingNextRef.current = true
+    setIsLoadingNext(true)
+    try {
+      const res = await fetch(`/api/chapters/${lastChapterId}/next`)
+      if (!res.ok) {
+        setHasMore(false)
+        hasMoreRef.current = false
+        return
+      }
+      const data = await res.json()
+      if (!data.chapter) {
+        setHasMore(false)
+        hasMoreRef.current = false
+        return
+      }
+      setLoadedChapters((prev) => {
+        if (prev.some((c) => c.id === data.chapter.id)) return prev
+        return [...prev, data.chapter]
+      })
+    } finally {
+      setIsLoadingNext(false)
+      isLoadingNextRef.current = false
+    }
+  }, [])
+
+  const loadPrevChapter = React.useCallback(async () => {
+    if (isLoadingPrevRef.current || !hasPrevRef.current) return
+    const firstChapterId = firstChapterIdRef.current
+    if (!firstChapterId) return
+
+    isLoadingPrevRef.current = true
+    try {
+      const res = await fetch(`/api/chapters/${firstChapterId}/prev`)
+      if (!res.ok) {
+        hasPrevRef.current = false
+        return
+      }
+      const data = await res.json()
+      if (!data.chapter) {
+        hasPrevRef.current = false
+        return
+      }
+
+      const scrollEl = contentScrollRef.current
+      const prevScrollHeight = scrollEl?.scrollHeight ?? 0
+      const prevScrollTop = scrollEl?.scrollTop ?? 0
+
+      setLoadedChapters((prev) => {
+        if (prev.some((c) => c.id === data.chapter.id)) return prev
+        return [data.chapter, ...prev]
+      })
+
+      requestAnimationFrame(() => {
+        if (!scrollEl) return
+        const nextScrollHeight = scrollEl.scrollHeight
+        scrollEl.scrollTop = prevScrollTop + (nextScrollHeight - prevScrollHeight)
+      })
+    } finally {
+      isLoadingPrevRef.current = false
+    }
+  }, [])
+
+  // Observers for Infinite Scroll
+  React.useEffect(() => {
+    const el = loadMoreRef.current
+    const root = contentScrollRef.current
+    if (!el || !root) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) loadNextChapter()
+      },
+      { root, rootMargin: "800px 0px", threshold: 0 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadNextChapter])
+
+  React.useEffect(() => {
+    const el = loadPrevRef.current
+    const root = contentScrollRef.current
+    if (!el || !root) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) loadPrevChapter()
+      },
+      { root, rootMargin: "800px 0px", threshold: 0 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadPrevChapter])
 
   if (!mounted) {
     return <div className="min-h-screen bg-background" />
   }
 
   return (
-    <div className={cn("min-h-screen transition-colors duration-300", currentTheme.bg)}>
-      {/* Sticky Header */}
-      <div className={cn(
-        "sticky top-0 z-40 w-full border-b transition-colors duration-300",
-        theme === 'dark' ? "border-zinc-800 bg-zinc-950/90" : "border-zinc-200 bg-white/90",
-        "backdrop-blur supports-[backdrop-filter]:bg-opacity-60"
-      )}>
-        <div className="container flex h-14 max-w-4xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" asChild title="返回目录" className={currentTheme.text}>
-              <Link href={`/novel/${chapter.novel.id}`}>
-                <ChevronLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div className="hidden flex-col sm:flex">
-              <span className={cn("text-xs opacity-70", currentTheme.text)}>{chapter.novel.title}</span>
-              <span className={cn("text-sm font-medium line-clamp-1", currentTheme.text)}>{chapter.title}</span>
+    <div className={cn("h-[calc(100vh-64px)] overflow-hidden relative select-none", currentTheme.bg)}>
+      <div className="relative w-full h-full flex justify-center">
+        {/* Chapter Tree Sidebar - Anchored to Center */}
+        <div 
+          className="fixed top-1/2 -translate-y-1/2 z-40 hidden lg:block select-none pointer-events-none"
+          style={{ 
+             height: TREE_HEIGHT,
+             // Position relative to center: center - 50% width of content (approx 384px) - sidebar width - spacing
+             // Content max-width is 3xl (48rem = 768px). 
+             // Center is 50vw. Left edge of content is 50vw - 384px.
+             // We want sidebar to be left of that.
+             left: 'calc(50vw - 384px - 180px)', 
+             width: '160px',
+             pointerEvents: 'auto'
+          }}
+        >
+          {/* Mask for fading top/bottom */}
+          <div 
+            className="absolute inset-0 z-20 pointer-events-none"
+            style={{
+              background: `linear-gradient(to bottom, 
+                ${theme === 'dark' ? 'rgba(9,9,11,1)' : 'rgba(255,255,255,1)'} 0%, 
+                transparent 15%, 
+                transparent 85%, 
+                ${theme === 'dark' ? 'rgba(9,9,11,1)' : 'rgba(255,255,255,1)'} 100%)`
+            }}
+          />
+          
+          {/* Scroll Container */}
+          <div 
+            ref={chapterNavRef}
+            className="h-full overflow-y-auto reader-scrollbar-hidden pr-4"
+            style={{ scrollBehavior: 'auto' }} // We handle smooth scroll manually or via class
+          >
+            {/* Vertical Line */}
+            <div className={cn(
+              "absolute left-[13.5px] top-0 bottom-0 w-px",
+              theme === "dark" ? "bg-zinc-800" : "bg-zinc-200"
+            )} />
+            
+            <div className="relative py-[128px]"> {/* Padding to allow first/last items to be centered (approx 4 items * 32px) */}
+              {chapters.map((c) => {
+                const isCurrent = c.id === activeChapterId
+                return (
+                  <a
+                    key={c.id}
+                    href={`/novel/${chapter.novel.id}/chapter/${c.id}`}
+                    onClick={(e) => handleChapterClick(e, c.id)}
+                    data-chapter-nav-id={c.id}
+                    className={cn(
+                      "group relative flex items-center gap-3 px-2 transition-all duration-300",
+                      isCurrent ? "opacity-100" : "opacity-40 hover:opacity-80"
+                    )}
+                    style={{ height: TREE_ITEM_HEIGHT }}
+                  >
+                    <span className={cn(
+                      "relative z-10 size-3 rounded-full border-2 transition-all",
+                      isCurrent 
+                        ? "bg-primary border-primary scale-110" 
+                        : theme === "dark" ? "bg-zinc-950 border-zinc-700 group-hover:border-zinc-500" : "bg-white border-zinc-300 group-hover:border-zinc-400"
+                    )} />
+                    <span className={cn(
+                      "truncate text-sm transition-all",
+                      currentTheme.text,
+                      isCurrent ? "font-bold scale-105 origin-left" : "font-normal"
+                    )}>
+                      {c.title}
+                    </span>
+                  </a>
+                )
+              })}
             </div>
           </div>
-          
-          <div className="flex items-center gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" title="阅读设置" className={currentTheme.text}>
-                  <Type className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>字号大小</DropdownMenuLabel>
-                <div className="flex items-center justify-between px-2 py-2">
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-8 w-8" 
-                    onClick={() => updateFontSize(fontSize - 2)}
-                    disabled={fontSize <= 14}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-12 text-center text-sm font-medium">{fontSize}px</span>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-8 w-8"
-                    onClick={() => updateFontSize(fontSize + 2)}
-                    disabled={fontSize >= 32}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>背景主题</DropdownMenuLabel>
-                <div className="grid grid-cols-3 gap-2 p-2">
-                  {THEMES.map((t) => (
-                    <button
-                      key={t.name}
-                      className={cn(
-                        "flex h-8 items-center justify-center rounded-md border text-xs font-medium transition-all",
-                        t.bg,
-                        t.name === 'dark' ? 'text-white border-zinc-700' : 'text-black border-zinc-200',
-                        theme === t.name && "ring-2 ring-primary ring-offset-2"
-                      )}
-                      onClick={() => updateTheme(t.name)}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button variant="ghost" size="icon" asChild title="返回首页" className={currentTheme.text}>
-              <Link href="/">
-                <Home className="h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
         </div>
-      </div>
 
-      <div className="container max-w-3xl py-12 px-4 md:px-6">
-        <article className="prose prose-lg mx-auto max-w-none">
-          <h1 className={cn(
-            "mb-12 text-center text-3xl font-bold tracking-tight md:text-4xl",
-            currentTheme.text
-          )}>
-            {chapter.title}
-          </h1>
-          
+        {/* Main Content Area */}
+        <div 
+          className="h-full w-full relative"
+        >
+           {/* Container for centering content */}
           <div 
-            className={cn(
-              "whitespace-pre-wrap leading-loose tracking-wide font-sans transition-all duration-300",
-              currentTheme.text
-            )}
-            style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}
+            ref={contentScrollRef}
+            className="h-full overflow-y-auto reader-scrollbar-hidden overscroll-contain"
           >
-            {chapter.content}
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 min-h-full">
+              <div ref={loadPrevRef} className="h-1 w-full" />
+              
+              <article className="prose prose-lg mx-auto max-w-none dark:prose-invert select-text">
+                {loadedChapters.map((c, idx) => (
+                  <div key={c.id} className="mb-20">
+                    <h1
+                      className={cn(
+                        "mb-12 text-center text-3xl font-bold tracking-tight md:text-4xl",
+                        currentTheme.text
+                      )}
+                      data-chapter-id={c.id}
+                      ref={(el) => {
+                        if (el) headingElsRef.current.set(c.id, el)
+                        else headingElsRef.current.delete(c.id)
+                      }}
+                    >
+                      {c.title}
+                    </h1>
+                    
+                    <div
+                      className={cn(
+                        "whitespace-pre-wrap leading-loose tracking-wide font-sans text-justify",
+                        currentTheme.text
+                      )}
+                      style={{ fontSize: `${fontSize}px`, lineHeight: "1.8" }}
+                    >
+                      {c.content}
+                    </div>
+                    
+                    <div className={cn("mt-12 h-px w-full", theme === "dark" ? "bg-zinc-800" : "bg-zinc-200")} />
+                  </div>
+                ))}
+              </article>
+
+              <div className="flex flex-col items-center gap-3 py-6 text-sm text-muted-foreground">
+                {isLoadingNext ? <span>正在加载下一章…</span> : null}
+                {!hasMore ? <span>已到最后一章</span> : null}
+              </div>
+              <div ref={loadMoreRef} className="h-1 w-full" />
+            </div>
           </div>
-        </article>
-
-        <div className={cn("my-12 h-px w-full", theme === 'dark' ? 'bg-zinc-800' : 'bg-zinc-200')} />
-
-        <div className="flex items-center justify-between gap-4">
-          <Button
-            variant="outline"
-            size="lg"
-            className={cn("flex-1", theme === 'dark' ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-800' : '')}
-            disabled={!prevChapterId}
-            asChild={!!prevChapterId}
-          >
-            {prevChapterId ? (
-              <Link href={`/novel/${chapter.novel.id}/chapter/${prevChapterId}`}>
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                上一章
-              </Link>
-            ) : (
-              <span>上一章</span>
-            )}
-          </Button>
-
-          <Button
-            variant="default"
-            size="lg"
-            className="flex-1"
-            disabled={!nextChapterId}
-            asChild={!!nextChapterId}
-          >
-            {nextChapterId ? (
-              <Link href={`/novel/${chapter.novel.id}/chapter/${nextChapterId}`}>
-                下一章
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Link>
-            ) : (
-              <span>下一章</span>
-            )}
-          </Button>
         </div>
       </div>
     </div>

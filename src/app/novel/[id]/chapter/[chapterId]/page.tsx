@@ -45,29 +45,16 @@ export default async function ChapterPage({ params }: ChapterPageProps) {
     notFound()
   }
 
-  // Find prev/next chapters based on order
-  const [prevChapter, nextChapter] = await Promise.all([
-    prisma.chapter.findFirst({
-      where: {
-        novelId,
-        order: chapter.order - 1,
-      },
-      select: { id: true },
-    }),
-    prisma.chapter.findFirst({
-      where: {
-        novelId,
-        order: chapter.order + 1,
-      },
-      select: { id: true },
-    }),
-  ])
+  const chapters = await prisma.chapter.findMany({
+    where: { novelId },
+    select: { id: true, title: true, order: true },
+    orderBy: { order: "asc" },
+  })
 
   return (
     <ReaderView 
       chapter={chapter}
-      prevChapterId={prevChapter?.id}
-      nextChapterId={nextChapter?.id}
+      chapters={chapters}
     />
   )
 }

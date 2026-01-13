@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { LogOut } from "lucide-react"
+import { ReaderSettingsCard } from "@/app/profile/reader-settings"
 
 export default async function ProfilePage() {
   const session = await auth()
@@ -63,7 +64,8 @@ export default async function ProfilePage() {
           </CardFooter>
         </Card>
 
-        {/* Placeholder for other settings */}
+        <ReaderSettingsCard />
+
         <Card>
             <CardHeader>
                 <CardTitle>账号安全</CardTitle>
