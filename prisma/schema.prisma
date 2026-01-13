@@ -1,0 +1,97 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?  // Hashed password
+  role      String   @default("USER") // USER, AUTHOR, ADMIN, SUPER_ADMIN
+  status    String   @default("ACTIVE") // ACTIVE, BANNED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  readingHistory ReadingHistory[]
+  uploadedNovels Novel[]          @relation("UserUploads")
+  auditLogs      AuditLog[]
+}
+
+model Novel {
+  id          String   @id @default(cuid())
+  title       String
+  author      String   // Display author name
+  description String
+  coverUrl    String?
+  pendingCoverUrl String? // For cover update requests
+  category    String
+  type        String   @default("NOVEL") // NOVEL, PAPER, AUTOBIOGRAPHY, ARTICLE
+  status      String   @default("PUBLISHED") // DRAFT, PENDING, PUBLISHED, REJECTED, PENDING_DELETION
+  serializationStatus String @default("SERIALIZING") // SERIALIZING, COMPLETED
+  aiReviewPassed Boolean?
+  aiQuality     Int?
+  aiReviewedAt  DateTime?
+  aiReviewRaw   String?
+  views       Int      @default(0)
+  rating      Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  uploaderId  String?
+  uploader    User?    @relation("UserUploads", fields: [uploaderId], references: [id])
+
+  chapters    Chapter[]
+  readingHistory ReadingHistory[]
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  order     Int
+  novelId   String
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  readingHistory ReadingHistory[]
+
+  @@index([novelId])
+}
+
+model ReadingHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  novelId   String
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, novelId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  resource  String
+  details   String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
