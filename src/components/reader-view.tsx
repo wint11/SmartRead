@@ -77,7 +77,7 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
     setMounted(true)
     const savedSize = localStorage.getItem("reader-font-size")
     const savedTheme = localStorage.getItem("reader-theme")
-
+    
     if (savedSize) setFontSize(parseInt(savedSize))
 
     if (savedTheme) {
@@ -106,6 +106,10 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
     () => new Set(loadedChapters.map((c) => c.id)),
     [loadedChapters]
   )
+
+  const activeOrder = React.useMemo(() => {
+    return chapters.find(c => c.id === activeChapterId)?.order ?? -1
+  }, [chapters, activeChapterId])
 
   // --- Synchronization Logic ---
 
@@ -204,20 +208,34 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
     const heading = headingElsRef.current.get(id)
     if (heading) {
       isSyncingContentRef.current = true
-      heading.scrollIntoView({ behavior: "smooth", block: "start" })
-      
-      // Reset flag after animation
+      // Use center alignment to ensure the heading falls within the Observer's visible area
+    // and provides better visual context for the jump
+    heading.scrollIntoView({ behavior: "smooth", block: "start" })
+    
+    // Reset flag after animation
       setTimeout(() => {
         isSyncingContentRef.current = false
       }, 1000)
     } else {
-      // If not loaded, we might need to jump? 
-      // But for now let's assume we only click what's visible or handle it differently.
-      // If it's not in DOM, we might strictly need to navigate. 
-      // Ideally, the tree shows all chapters, but we only have content for some.
-      // If user clicks a far-away chapter, we MUST navigate.
-      const isLoaded = loadedChapters.some(c => c.id === id)
-      if (!isLoaded) {
+      // Not loaded, load from local props
+      const targetChapter = chapters.find(c => c.id === id)
+      if (targetChapter && targetChapter.content) {
+         setLoadedChapters([{ ...targetChapter, content: targetChapter.content! }])
+         
+         // Reset infinite scroll state
+         setHasMore(true)
+         hasMoreRef.current = true
+         hasPrevRef.current = true
+         isLoadingNextRef.current = false
+         setIsLoadingNext(false)
+         isLoadingPrevRef.current = false
+         
+         // Scroll to top
+         // Use setTimeout to ensure render happens first
+         setTimeout(() => {
+            contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" })
+         }, 0)
+      } else {
          router.push(`/novel/${chapter.novel.id}/chapter/${id}`)
       }
     }
@@ -254,28 +272,32 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
 
     isLoadingNextRef.current = true
     setIsLoadingNext(true)
-    try {
-      const res = await fetch(`/api/chapters/${lastChapterId}/next`)
-      if (!res.ok) {
-        setHasMore(false)
-        hasMoreRef.current = false
-        return
-      }
-      const data = await res.json()
-      if (!data.chapter) {
-        setHasMore(false)
-        hasMoreRef.current = false
-        return
-      }
-      setLoadedChapters((prev) => {
-        if (prev.some((c) => c.id === data.chapter.id)) return prev
-        return [...prev, data.chapter]
-      })
-    } finally {
+    
+    // Find next chapter from props.chapters
+    const currentIndex = chapters.findIndex(c => c.id === lastChapterId)
+    const nextChapter = chapters[currentIndex + 1]
+
+    if (!nextChapter || !nextChapter.content) {
+      console.log("No next chapter or content missing")
+      setHasMore(false)
+      hasMoreRef.current = false
       setIsLoadingNext(false)
       isLoadingNextRef.current = false
+      return
     }
-  }, [])
+
+    // Simulate async slightly to not block UI thread instantly if heavy, 
+    // though with local data it's instant.
+    // We can just set it.
+    
+    setLoadedChapters((prev) => {
+      if (prev.some((c) => c.id === nextChapter.id)) return prev
+      return [...prev, { ...nextChapter, content: nextChapter.content! }]
+    })
+
+    setIsLoadingNext(false)
+    isLoadingNextRef.current = false
+  }, [chapters])
 
   const loadPrevChapter = React.useCallback(async () => {
     if (isLoadingPrevRef.current || !hasPrevRef.current) return
@@ -283,61 +305,86 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
     if (!firstChapterId) return
 
     isLoadingPrevRef.current = true
-    try {
-      const res = await fetch(`/api/chapters/${firstChapterId}/prev`)
-      if (!res.ok) {
-        hasPrevRef.current = false
-        return
-      }
-      const data = await res.json()
-      if (!data.chapter) {
-        hasPrevRef.current = false
-        return
-      }
+    
+    // Find prev chapter
+    const currentIndex = chapters.findIndex(c => c.id === firstChapterId)
+    const prevChapter = chapters[currentIndex - 1]
 
-      const scrollEl = contentScrollRef.current
-      const prevScrollHeight = scrollEl?.scrollHeight ?? 0
-      const prevScrollTop = scrollEl?.scrollTop ?? 0
-
-      setLoadedChapters((prev) => {
-        if (prev.some((c) => c.id === data.chapter.id)) return prev
-        return [data.chapter, ...prev]
-      })
-
-      requestAnimationFrame(() => {
-        if (!scrollEl) return
-        const nextScrollHeight = scrollEl.scrollHeight
-        scrollEl.scrollTop = prevScrollTop + (nextScrollHeight - prevScrollHeight)
-      })
-    } finally {
+    if (!prevChapter || !prevChapter.content) {
+      hasPrevRef.current = false
       isLoadingPrevRef.current = false
+      return
     }
-  }, [])
+
+    const scrollEl = contentScrollRef.current
+    const prevScrollHeight = scrollEl?.scrollHeight ?? 0
+    const prevScrollTop = scrollEl?.scrollTop ?? 0
+
+    setLoadedChapters((prev) => {
+      if (prev.some((c) => c.id === prevChapter.id)) return prev
+      return [{ ...prevChapter, content: prevChapter.content! }, ...prev]
+    })
+
+    requestAnimationFrame(() => {
+      if (!scrollEl) return
+      const nextScrollHeight = scrollEl.scrollHeight
+      scrollEl.scrollTop = prevScrollTop + (nextScrollHeight - prevScrollHeight)
+    })
+    
+    isLoadingPrevRef.current = false
+  }, [chapters])
+
+  // 4. Scroll Event Listener (Backup for IntersectionObserver)
+  const handleScroll = React.useCallback(() => {
+    const el = contentScrollRef.current
+    if (!el) return
+
+    const { scrollTop, scrollHeight, clientHeight } = el
+    // If we are close to bottom (e.g. within 500px), try to load next
+    if (scrollHeight - scrollTop - clientHeight < 500) {
+      if (!isLoadingNextRef.current && hasMoreRef.current) {
+        console.log("Scroll trigger loading next")
+        loadNextChapter()
+      }
+    }
+    
+    // Also check for prev loading
+    if (scrollTop < 500) { // Increased threshold for better experience
+       if (!isLoadingPrevRef.current && hasPrevRef.current) {
+         console.log("Scroll trigger loading prev")
+         loadPrevChapter()
+       }
+    }
+  }, [loadNextChapter, loadPrevChapter])
 
   // Observers for Infinite Scroll
   React.useEffect(() => {
     const el = loadMoreRef.current
-    const root = contentScrollRef.current
-    if (!el || !root) return
+    // Use viewport as root (null) to avoid ref issues, and set large margin
+    // This means as soon as the element is within 400px of the viewport bottom, it triggers
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) loadNextChapter()
+        const entry = entries[0]
+        if (entry.isIntersecting) {
+          console.log("Observer trigger loading next")
+          loadNextChapter()
+        }
       },
-      { root, rootMargin: "800px 0px", threshold: 0 }
+      { root: null, rootMargin: "0px 0px 400px 0px", threshold: 0 } 
     )
-    observer.observe(el)
+    
+    if (el) observer.observe(el)
     return () => observer.disconnect()
   }, [loadNextChapter])
 
   React.useEffect(() => {
     const el = loadPrevRef.current
-    const root = contentScrollRef.current
-    if (!el || !root) return
+    if (!el) return
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) loadPrevChapter()
       },
-      { root, rootMargin: "800px 0px", threshold: 0 }
+      { root: null, rootMargin: "800px 0px 0px 0px", threshold: 0 }
     )
     observer.observe(el)
     return () => observer.disconnect()
@@ -391,15 +438,16 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
             <div className="relative py-[128px]"> {/* Padding to allow first/last items to be centered (approx 4 items * 32px) */}
               {chapters.map((c) => {
                 const isCurrent = c.id === activeChapterId
+
                 return (
-                  <a
+                  <Link
                     key={c.id}
                     href={`/novel/${chapter.novel.id}/chapter/${c.id}`}
                     onClick={(e) => handleChapterClick(e, c.id)}
                     data-chapter-nav-id={c.id}
                     className={cn(
                       "group relative flex items-center gap-3 px-2 transition-all duration-300",
-                      isCurrent ? "opacity-100" : "opacity-40 hover:opacity-80"
+                      isCurrent ? "opacity-100" : "opacity-80 hover:opacity-100"
                     )}
                     style={{ height: TREE_ITEM_HEIGHT }}
                   >
@@ -411,12 +459,13 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
                     )} />
                     <span className={cn(
                       "truncate text-sm transition-all",
-                      currentTheme.text,
-                      isCurrent ? "font-bold scale-105 origin-left" : "font-normal"
+                      isCurrent 
+                        ? cn(currentTheme.text, "font-bold scale-105 origin-left") 
+                        : "text-zinc-400 font-normal"
                     )}>
                       {c.title}
                     </span>
-                  </a>
+                  </Link>
                 )
               })}
             </div>
@@ -430,6 +479,7 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
            {/* Container for centering content */}
           <div 
             ref={contentScrollRef}
+            onScroll={handleScroll}
             className="h-full overflow-y-auto reader-scrollbar-hidden overscroll-contain"
           >
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 min-h-full">
@@ -437,17 +487,20 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
               
               <article className="prose prose-lg mx-auto max-w-none dark:prose-invert select-text">
                 {loadedChapters.map((c, idx) => (
-                  <div key={c.id} className="mb-20">
+                  <div 
+                    key={c.id} 
+                    className="mb-20 scroll-mt-24"
+                    data-chapter-id={c.id}
+                    ref={(el) => {
+                      if (el) headingElsRef.current.set(c.id, el)
+                      else headingElsRef.current.delete(c.id)
+                    }}
+                  >
                     <h1
                       className={cn(
                         "mb-12 text-center text-3xl font-bold tracking-tight md:text-4xl",
                         currentTheme.text
                       )}
-                      data-chapter-id={c.id}
-                      ref={(el) => {
-                        if (el) headingElsRef.current.set(c.id, el)
-                        else headingElsRef.current.delete(c.id)
-                      }}
                     >
                       {c.title}
                     </h1>

@@ -31,11 +31,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
         token.role = user.role
       }
+      
+      // Always refresh role from database to ensure permission updates take effect immediately
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true }
+        })
+        if (dbUser) {
+          token.role = dbUser.role
+        }
+      }
+
       return token
     },
     session({ session, token }) {

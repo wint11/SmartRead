@@ -9,7 +9,8 @@ import {
     rejectCoverUpdate
 } from "./actions"
 import { useTransition } from "react"
-import { Check, X, Trash2, Image as ImageIcon } from "lucide-react"
+import { Check, X, Trash2, Image as ImageIcon, Eye } from "lucide-react"
+import Link from "next/link"
 import {
   Tooltip,
   TooltipContent,
@@ -96,20 +97,65 @@ export function ArticleActions({ id, status, pendingCoverUrl }: { id: string, st
 
   if (status === 'PUBLISHED') {
     return (
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-        disabled={isPending}
-        onClick={() => startTransition(() => updateArticleStatus(id, 'REJECTED'))}
-      >
-        <X className="mr-1 h-4 w-4" /> 下架
-      </Button>
+      <div className="flex gap-2">
+        <Link href={`/admin/articles/${id}`}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+          >
+            <Eye className="mr-1 h-4 w-4" /> 详情
+          </Button>
+        </Link>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+          disabled={isPending}
+          onClick={() => startTransition(() => updateArticleStatus(id, 'REJECTED'))}
+        >
+          <X className="mr-1 h-4 w-4" /> 下架
+        </Button>
+      </div>
+    )
+  }
+
+  if (status === 'REJECTED') {
+    return (
+      <div className="flex gap-2">
+        <Link href={`/admin/articles/${id}`}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+          >
+            <Eye className="mr-1 h-4 w-4" /> 详情
+          </Button>
+        </Link>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+          disabled={isPending}
+          onClick={() => startTransition(() => updateArticleStatus(id, 'PUBLISHED'))}
+        >
+          <Check className="mr-1 h-4 w-4" /> 重新上架
+        </Button>
+      </div>
     )
   }
 
   return (
     <div className="flex gap-2">
+      <Link href={`/admin/articles/${id}`}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+        >
+          <Eye className="mr-1 h-4 w-4" /> 详情
+        </Button>
+      </Link>
       <Button 
         variant="ghost" 
         size="sm" 

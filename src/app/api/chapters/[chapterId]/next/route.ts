@@ -21,7 +21,13 @@ export async function GET(
   const nextChapter = await prisma.chapter.findFirst({
     where: {
       novelId: currentChapter.novelId,
-      order: currentChapter.order + 1,
+      status: 'PUBLISHED',
+      order: {
+        gt: currentChapter.order,
+      },
+    },
+    orderBy: {
+      order: "asc",
     },
     select: { id: true, title: true, content: true, order: true },
   })

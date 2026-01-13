@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BookOpen, User, PenTool, LayoutDashboard, LogOut } from "lucide-react"
+import { BookOpen, User, PenTool, LayoutDashboard, LogOut, Plus, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Suspense } from "react"
@@ -15,10 +15,45 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MainNav } from "@/components/main-nav"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cookies } from "next/headers"
+import { decode } from "next-auth/jwt"
+import { addNewAccount, switchAccount } from "@/app/actions/account-switch"
 
 export async function Navbar() {
   const session = await auth()
   const userRole = session?.user?.role ?? ""
+
+  // Get stored accounts
+  const cookieStore = await cookies()
+  const ACCOUNT_COOKIE_PREFIX = 'smartread-account-'
+  const storedAccounts: { id: string; name?: string | null; email?: string | null; image?: string | null }[] = []
+  const SESSION_COOKIE_NAME = process.env.NODE_ENV === 'production' ? '__Secure-authjs.session-token' : 'authjs.session-token'
+
+  if (session) {
+    for (const cookie of cookieStore.getAll()) {
+      if (cookie.name.startsWith(ACCOUNT_COOKIE_PREFIX)) {
+        try {
+          const token = await decode({ 
+            token: cookie.value, 
+            secret: process.env.AUTH_SECRET!,
+            salt: SESSION_COOKIE_NAME
+          })
+          if (token && token.sub) {
+              storedAccounts.push({
+                id: token.sub,
+                name: token.name,
+                email: token.email,
+                image: token.picture,
+              })
+          }
+        } catch (e) {
+          console.error("Failed to decode stored account token", e)
+        }
+      }
+    }
+  }
+
+  const canAddAccount = storedAccounts.length < 2 // 1 active + 2 stored = 3 total
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -48,7 +83,7 @@ export async function Navbar() {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{session.user?.name}</p>
@@ -77,7 +112,37 @@ export async function Navbar() {
                        </Link>
                      </DropdownMenuItem>
                   )}
+                  
                   <DropdownMenuSeparator />
+                  
+                  {/* Account Switcher */}
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">切换账号</DropdownMenuLabel>
+                  {storedAccounts.map((acc) => (
+                    <DropdownMenuItem key={acc.id} className="p-0">
+                      <form action={switchAccount.bind(null, acc.id!)} className="w-full">
+                        <button className="flex w-full items-center px-2 py-1.5 cursor-pointer">
+                          <Avatar className="h-6 w-6 mr-2">
+                            <AvatarImage src={acc.image || ""} />
+                            <AvatarFallback>{acc.name?.[0]?.toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="truncate flex-1 text-left text-sm">{acc.name}</span>
+                        </button>
+                      </form>
+                    </DropdownMenuItem>
+                  ))}
+                  
+                  {canAddAccount && (
+                    <DropdownMenuItem className="p-0">
+                       <form action={addNewAccount} className="w-full">
+                         <button className="flex w-full items-center px-2 py-1.5 cursor-pointer text-muted-foreground hover:text-foreground">
+                           <Plus className="mr-2 h-4 w-4" />添加账号
+                         </button>
+                       </form>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  
                   <DropdownMenuItem asChild>
                      <form action={async () => {
                        "use server"

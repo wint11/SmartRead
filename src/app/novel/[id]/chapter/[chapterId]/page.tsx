@@ -29,8 +29,14 @@ export async function generateMetadata({ params }: ChapterPageProps): Promise<Me
 export default async function ChapterPage({ params }: ChapterPageProps) {
   const { id: novelId, chapterId } = await params
 
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: chapterId },
+  const chapter = await prisma.chapter.findFirst({
+    where: { 
+      id: chapterId,
+      status: 'PUBLISHED',
+      novel: {
+        status: 'PUBLISHED'
+      }
+    },
     include: {
       novel: {
         select: {
@@ -46,8 +52,11 @@ export default async function ChapterPage({ params }: ChapterPageProps) {
   }
 
   const chapters = await prisma.chapter.findMany({
-    where: { novelId },
-    select: { id: true, title: true, order: true },
+    where: { 
+      novelId,
+      status: 'PUBLISHED'
+    },
+    select: { id: true, title: true, order: true, content: true },
     orderBy: { order: "asc" },
   })
 

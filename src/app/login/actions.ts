@@ -63,3 +63,49 @@ export async function login(formData: FormData) {
     throw error
   }
 }
+
+export async function register(formData: FormData) {
+  try {
+    const email = (formData.get("email") as string | null) ?? ""
+    const password = (formData.get("password") as string | null) ?? ""
+    const confirmPassword = (formData.get("confirmPassword") as string | null) ?? ""
+    const name = (formData.get("name") as string | null) ?? ""
+
+    if (!email || !password || !name) {
+      return { success: false, error: "请填写所有必填字段" }
+    }
+
+    if (password !== confirmPassword) {
+      return { success: false, error: "两次输入的密码不一致" }
+    }
+
+    if (password.length < 6) {
+      return { success: false, error: "密码长度至少为6位" }
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    })
+
+    if (existingUser) {
+      return { success: false, error: "该邮箱已被注册" }
+    }
+
+    const bcrypt = require("bcryptjs")
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    await prisma.user.create({
+      data: {
+        email,
+        name,
+        password: hashedPassword,
+        role: "USER", // Default role
+      },
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error("Registration error:", error)
+    return { success: false, error: "注册失败，请稍后重试" }
+  }
+}

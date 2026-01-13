@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, FileText, Users, History } from "lucide-react"
+import { LayoutDashboard, FileText, Users, History, BookOpen } from "lucide-react"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -26,9 +26,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Button>
           
           {["ADMIN", "SUPER_ADMIN"].includes(role) && (
-            <Button variant="ghost" className="justify-start" asChild>
-              <Link href="/admin/articles"><FileText className="mr-2 h-4 w-4"/> 文章审核</Link>
-            </Button>
+            <>
+              <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">作品审核</div>
+              <Button variant="ghost" className="justify-start w-full pl-6" asChild>
+                <Link href="/admin/audit/novels"><FileText className="mr-2 h-4 w-4"/> 新作品审核</Link>
+              </Button>
+              <Button variant="ghost" className="justify-start w-full pl-6" asChild>
+                <Link href="/admin/audit/chapters"><FileText className="mr-2 h-4 w-4"/> 新章节审核</Link>
+              </Button>
+              <Button variant="ghost" className="justify-start w-full pl-6" asChild>
+                <Link href="/admin/audit/history"><History className="mr-2 h-4 w-4"/> 审核历史</Link>
+              </Button>
+
+              <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">内容管理</div>
+              <Button variant="ghost" className="justify-start w-full pl-6" asChild>
+                <Link href="/admin/novels"><BookOpen className="mr-2 h-4 w-4"/> 已有作品管理</Link>
+              </Button>
+            </>
           )}
 
           {/* Super Admin Actions */}

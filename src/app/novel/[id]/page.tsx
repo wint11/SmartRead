@@ -19,10 +19,14 @@ import { AddToBookshelf } from "@/components/add-to-bookshelf"
 
 export default async function NovelDetailPage({ params }: NovelDetailPageProps) {
   const { id } = await params
-  const novel = await prisma.novel.findUnique({
-    where: { id },
+  const novel = await prisma.novel.findFirst({
+    where: { 
+      id,
+      status: 'PUBLISHED'
+    },
     include: {
       chapters: {
+        where: { status: 'PUBLISHED' },
         orderBy: { order: 'asc' }
       }
     }

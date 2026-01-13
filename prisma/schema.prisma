@@ -20,6 +20,7 @@ model User {
   readingHistory ReadingHistory[]
   uploadedNovels Novel[]          @relation("UserUploads")
   auditLogs      AuditLog[]
+  reviews        ReviewLog[]
 }
 
 model Novel {
@@ -31,8 +32,15 @@ model Novel {
   pendingCoverUrl String? // For cover update requests
   category    String
   type        String   @default("NOVEL") // NOVEL, PAPER, AUTOBIOGRAPHY, ARTICLE
-  status      String   @default("PUBLISHED") // DRAFT, PENDING, PUBLISHED, REJECTED, PENDING_DELETION
+  status      String   @default("DRAFT") // DRAFT, PENDING, PUBLISHED, REJECTED, PENDING_DELETION, TAKEDOWN
   serializationStatus String @default("SERIALIZING") // SERIALIZING, COMPLETED
+  isRecommended Boolean @default(false) // Featured on home page
+  
+  // Audit/Review fields
+  lastSubmittedAt DateTime?
+  lastApprovedAt  DateTime?
+  changeLog      String?   // JSON string or text describing changes since last approval
+
   aiReviewPassed Boolean?
   aiQuality     Int?
   aiReviewedAt  DateTime?
@@ -47,6 +55,21 @@ model Novel {
 
   chapters    Chapter[]
   readingHistory ReadingHistory[]
+  reviewLogs  ReviewLog[]
+}
+
+model ReviewLog {
+  id        String   @id @default(cuid())
+  novelId   String
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  
+  reviewerId String
+  reviewer   User    @relation(fields: [reviewerId], references: [id])
+  
+  action    String   // APPROVE, REJECT
+  feedback  String?  // Feedback to author
+  
+  createdAt DateTime @default(now())
 }
 
 model Chapter {
@@ -56,6 +79,10 @@ model Chapter {
   order     Int
   novelId   String
   novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  status    String   @default("DRAFT") // DRAFT, PENDING, PUBLISHED, REJECTED
+  
+  isModified Boolean @default(false) // Track if modified since last submission
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   

@@ -2,7 +2,15 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { PenTool, LayoutDashboard, PlusCircle } from "lucide-react"
+import { 
+  PenTool, 
+  LayoutDashboard, 
+  PlusCircle, 
+  BookOpen, 
+  FileEdit, 
+  CheckSquare, 
+  FileText 
+} from "lucide-react"
 
 export default async function AuthorLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -24,11 +32,25 @@ export default async function AuthorLayout({ children }: { children: React.React
           <Button variant="ghost" className="justify-start" asChild>
             <Link href="/author"><LayoutDashboard className="mr-2 h-4 w-4"/> 概览</Link>
           </Button>
+          
+          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground mt-4">
+            作品管理
+          </div>
+          
           <Button variant="ghost" className="justify-start" asChild>
-            <Link href="/author/works"><PenTool className="mr-2 h-4 w-4"/> 作品管理</Link>
+            <Link href="/author/works/create"><PlusCircle className="mr-2 h-4 w-4"/> 创建新作品</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild>
-            <Link href="/author/works/new"><PlusCircle className="mr-2 h-4 w-4"/> 发布作品</Link>
+            <Link href="/author/chapters/publish"><BookOpen className="mr-2 h-4 w-4"/> 发布新章节</Link>
+          </Button>
+          <Button variant="ghost" className="justify-start" asChild>
+            <Link href="/author/chapters/edit"><FileEdit className="mr-2 h-4 w-4"/> 编辑已有章节</Link>
+          </Button>
+          <Button variant="ghost" className="justify-start" asChild>
+            <Link href="/author/chapters/review"><CheckSquare className="mr-2 h-4 w-4"/> 提交审核</Link>
+          </Button>
+          <Button variant="ghost" className="justify-start" asChild>
+            <Link href="/author/drafts"><FileText className="mr-2 h-4 w-4"/> 草稿箱</Link>
           </Button>
         </nav>
       </aside>

@@ -24,7 +24,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     ? { updatedAt: 'desc' } 
     : { updatedAt: 'desc' }
 
-  const where = category ? { category } : {}
+  const where: Prisma.NovelWhereInput = {
+    status: 'PUBLISHED',
+    ...(category ? { category } : {})
+  }
 
   const novels = await prisma.novel.findMany({
     where,

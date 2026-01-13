@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from "react"
+import { useActionState, useState, use } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ const initialState: ChapterFormState = {
 }
 
 export default function NewChapterPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const [state, formAction, isPending] = useActionState(createChapter, initialState)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
@@ -26,12 +27,8 @@ export default function NewChapterPage({ params }: { params: Promise<{ id: strin
            <CardDescription>填写章节标题和正文</CardDescription>
          </CardHeader>
          <CardContent className="space-y-4">
-           <form action={async (formData) => {
-             // Append novelId to formData
-             const { id } = await params
-             formData.append('novelId', id)
-             formAction(formData)
-           }} className="space-y-4">
+           <form action={formAction} className="space-y-4">
+             <input type="hidden" name="novelId" value={id} />
              <div className="space-y-2">
                <Label htmlFor="title">章节标题</Label>
                <Input
@@ -62,7 +59,7 @@ export default function NewChapterPage({ params }: { params: Promise<{ id: strin
                )}
              </div>
              {state.error && typeof state.error === 'string' && (
-                <p className="text-sm text-red-500">{state.error}</p>
+               <p className="text-sm text-red-500">{state.error}</p>
              )}
              <Button className="w-full" type="submit" disabled={isPending}>
                {isPending ? "发布中..." : "发布章节"}

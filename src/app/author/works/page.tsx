@@ -23,7 +23,7 @@ export default async function MyWorksPage() {
       <div className="flex items-center justify-between">
          <h1 className="text-3xl font-bold tracking-tight">作品管理</h1>
          <Button asChild>
-            <Link href="/author/works/new"><PlusCircle className="mr-2 h-4 w-4"/> 发布新作品</Link>
+            <Link href="/author/works/create"><PlusCircle className="mr-2 h-4 w-4"/> 发布新作品</Link>
          </Button>
       </div>
       
@@ -58,7 +58,7 @@ export default async function MyWorksPage() {
                 <TableCell>
                     {article.serializationStatus !== 'COMPLETED' ? (
                         <Button variant="outline" size="sm" asChild>
-                            <Link href={`/author/works/${article.id}/chapters/new`}>新增章节</Link>
+                            <Link href={`/author/chapters/publish?novelId=${article.id}`}>新增章节</Link>
                         </Button>
                     ) : (
                         <span className="text-muted-foreground text-sm">已完结</span>
