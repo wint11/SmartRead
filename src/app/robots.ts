@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/private/', '/api/ctf/secret-robot-flag'],
+      disallow: ['/hidden_directory/'],
     },
   }
 }

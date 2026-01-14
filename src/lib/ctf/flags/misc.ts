@@ -9,6 +9,7 @@ export const MISC_FLAGS = {
   48: "flag{http_418_im_a_teapot}", // teapot
   49: "flag{sudo_incident_reported_santa_claus}", // sudo fail
   50: "flag{have_you_tried_turning_it_off_and_on_again}", // reboot
+  51: "flag{zip_files_are_fun_9988}", // Unzip
 } as const
 
 export const MISC_HINTS = {
@@ -22,4 +23,5 @@ export const MISC_HINTS = {
   48: "Brew some coffee.",
   49: "Fail to be root multiple times.",
   50: "Classic IT support fix.",
+  51: "Extract the backup archive.",
 } as const

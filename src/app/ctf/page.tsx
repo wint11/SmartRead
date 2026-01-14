@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function CtfPage() {
   return (
-    <div className="fixed inset-0 overflow-hidden bg-background text-foreground font-mono flex flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 overflow-hidden bg-background text-foreground font-mono flex flex-col items-center justify-center p-4 pt-16">
       {/* Flag 1: HTML Comment - Rendered to DOM */}
       <div dangerouslySetInnerHTML={{ __html: '<!-- flag{welcome_to_smartread_ctf_2026} -->' }} style={{ display: 'none' }} />
       
@@ -17,7 +17,7 @@ export default function CtfPage() {
           <h1 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
             System Diagnostics
           </h1>
-          <span className="text-xs text-muted-foreground/50">v1.0.0</span>
+          <span className="text-xs text-muted-foreground/50">V2.0</span>
         </div>
         
         <CtfChallenge />

@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Trophy, X, CircleHelp } from 'lucide-react'
 import { getLeaderboard } from '../actions'
+import { SkillTree } from './skill-tree'
 import { cn } from '@/lib/utils'
 
 interface LeaderboardProps {
   solvedCount: number
   hidden?: boolean
+  solvedFlags: number[]
 }
 
 interface LeaderboardEntry {
@@ -19,12 +21,17 @@ interface LeaderboardEntry {
   message?: string
 }
 
-export function Leaderboard({ solvedCount, hidden = false }: LeaderboardProps) {
+export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: LeaderboardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [data, setData] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+
+  // Long press logic
+  const timerRef = useRef<NodeJS.Timeout | number | null>(null)
+  const isLongPress = useRef(false)
+  const [isSkillTreeOpen, setIsSkillTreeOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -46,16 +53,56 @@ export function Leaderboard({ solvedCount, hidden = false }: LeaderboardProps) {
     }
   }, [isOpen, solvedCount])
 
-  if (hidden && !isOpen) return null
+  if (hidden && !isOpen && !isSkillTreeOpen) return null
   if (!mounted) return null
+
+  const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent default context menu on touch
+    if (e.type === 'touchstart') {
+       // e.preventDefault() // Might block scrolling if not careful, but button is fixed.
+    }
+    
+    isLongPress.current = false
+    
+    const duration = 2000 // 2 seconds
+
+    timerRef.current = setTimeout(() => {
+      isLongPress.current = true
+      setIsSkillTreeOpen(true)
+    }, duration)
+  }
+
+  const handlePressEnd = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current as any)
+      timerRef.current = null
+    }
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLongPress.current) {
+        // Prevent opening leaderboard if it was a long press
+        e.preventDefault()
+        e.stopPropagation()
+        isLongPress.current = false // Reset
+        return
+    }
+    setIsOpen(true)
+  }
 
   return createPortal(
     <>
       <div className="fixed top-24 right-8 z-[9999] group perspective-1000">
         <button 
-          onClick={() => setIsOpen(true)}
+          onMouseDown={handlePressStart}
+          onMouseUp={handlePressEnd}
+          onMouseLeave={handlePressEnd}
+          onTouchStart={handlePressStart}
+          onTouchEnd={handlePressEnd}
+          onClick={handleClick}
           className="
             w-14 h-14 
+            relative
             flex items-center justify-center 
             bg-zinc-900/90 border border-white/20 
             text-white/80
@@ -67,13 +114,20 @@ export function Leaderboard({ solvedCount, hidden = false }: LeaderboardProps) {
             shadow-[0_0_15px_rgba(255,255,255,0.1)]
             hover:bg-zinc-800 hover:text-white hover:border-white/40
             backdrop-blur-sm
+            overflow-hidden
           "
-          title="???"
+          title="Hold for secrets..."
           style={{ transformStyle: 'preserve-3d' }}
         >
-          ?
+          <span className="relative z-10">?</span>
         </button>
       </div>
+
+      <SkillTree 
+        isOpen={isSkillTreeOpen} 
+        onClose={() => setIsSkillTreeOpen(false)} 
+        solvedFlags={solvedFlags} 
+      />
 
       {isOpen && (
         <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4 font-mono text-gray-300 pointer-events-auto">

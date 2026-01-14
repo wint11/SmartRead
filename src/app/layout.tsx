@@ -41,7 +41,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Navbar />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 pt-16">{children}</main>
           <Footer />
           <Toaster />
         </ThemeProvider>

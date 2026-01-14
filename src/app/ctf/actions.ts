@@ -1,7 +1,8 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { FLAGS } from './flags'
+import { FLAGS } from '@/lib/ctf/flags'
+import { SECURE_FILES } from '@/lib/ctf/secure-data'
 
 export async function verifyFlag(inputFlag: string) {
   const normalizedFlag = inputFlag.trim()
@@ -22,6 +23,13 @@ export async function verifyFlag(inputFlag: string) {
     success: false,
     message: "Incorrect flag."
   }
+}
+
+export async function getFileContent(fileId: string) {
+  if (SECURE_FILES[fileId]) {
+    return SECURE_FILES[fileId];
+  }
+  return "Error: File content not found or corrupted.";
 }
 
 export async function checkSqlInjection(input: string) {

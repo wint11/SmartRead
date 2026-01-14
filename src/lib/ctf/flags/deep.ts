@@ -14,6 +14,7 @@ export const DEEP_FLAGS = {
   213: "flag{docker_container_escape_host}", // 13. Docker Escape
   214: "flag{buffer_overflow_return_to_libc}", // 14. Advanced BOF
   215: "flag{reverse_engineering_xor_cipher}", // 15. Reverse Eng
+  304: "flag{history_file_reveals_actions}", // History Lesson
 } as const
 
 export const DEEP_HINTS = {

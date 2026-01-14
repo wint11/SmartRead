@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const response = NextResponse.json({ 
-    message: "Nothing to see here in the body...",
-    hint: "Check the headers!"
-  })
-  
-  // Flag 2: Custom Header
-  response.headers.set('X-SmartRead-Flag', 'flag{header_is_key_7733}')
-  
-  return response
+  return NextResponse.json(
+    { hint: "Check the headers!" },
+    {
+      status: 200,
+      headers: {
+        'X-CTF-Flag': 'flag{header_is_key_7733}',
+        'Access-Control-Expose-Headers': 'X-CTF-Flag'
+      }
+    }
+  )
 }

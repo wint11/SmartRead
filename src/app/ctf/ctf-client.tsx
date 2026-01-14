@@ -7,7 +7,9 @@ import { Leaderboard } from "./components/leaderboard"
 import { ShatteredEffect } from "./components/shattered-effect"
 import { BombEffect } from "./components/bomb-effect"
 import { TerminalShatter } from "./components/terminal-shatter"
-import { useEffect, useState } from "react"
+import { useShatterMechanic } from "./gameplay/shatter"
+import { useEffect } from "react"
+import { setCtfCookie } from "./actions"
 
 export function CtfChallenge() {
   const {
@@ -26,34 +28,27 @@ export function CtfChallenge() {
     isInitialized
   } = useCtfGame()
 
-  const [visualState, setVisualState] = useState<'normal' | 'system_failure' | 'shattering' | 'recovering'>('normal')
+  const { visualState, isShattered } = useShatterMechanic(commandNotFoundCount, resetGame)
 
-  // Handle Shatter Trigger
   useEffect(() => {
-    if (commandNotFoundCount >= 5 && visualState === 'normal') {
-        setVisualState('system_failure')
-        
-        // Step 1: Show System Failure message for 2 seconds
-        setTimeout(() => {
-            setVisualState('shattering')
-            
-            // Step 2: Wait for shatter animation (2s), then reset
-            setTimeout(() => {
-                resetGame()
-                setVisualState('recovering')
-                
-                // Step 3: Reboot sequence
-                setTimeout(() => {
-                    setVisualState('normal')
-                }, 1000)
-            }, 2000)
-        }, 2000)
-    }
-  }, [commandNotFoundCount, visualState, resetGame])
+    // Flag 13: Cookie
+    setCtfCookie()
+    
+    // Flag 15: Console Log
+    console.log("%cSTOP!", "color: red; font-size: 30px; font-weight: bold;")
+    console.log("%cThis is a browser feature intended for developers.", "font-size: 16px;")
+    console.log("If someone told you to copy-paste something here to enable a feature, it is a scam.")
+    console.log("But since you are here for the CTF: flag{console_log_master_3344}")
+
+    // Flag 17: Local Storage
+    localStorage.setItem('debug_token', 'flag{local_storage_is_not_secret_5566}')
+    
+    // Trigger Hint Request for Flag 12
+    fetch('/api/ctf/hint').catch(console.error)
+  }, [])
 
   if (!isInitialized) return null
 
-  const isShattered = commandNotFoundCount >= 5 && visualState !== 'normal'
   const isBombCritical = bombState.active && bombState.timeLeft < 60 // Less than 1 min
 
   return (
@@ -104,7 +99,7 @@ export function CtfChallenge() {
             // Apply distortion during system failure
             filter: visualState === 'system_failure' ? 'blur(2px) contrast(1.5) grayscale(0.8)' : (isShattered ? 'blur(1px) contrast(1.2)' : 'none'),
             // Instant hide for shattering, slow fade in for normal
-            transition: visualState === 'shattering' ? 'none' : 'opacity 1s ease-out, filter 0.5s ease'
+            transition: visualState === 'shattering' ? 'none' : 'transform 1s ease-in-out, opacity 1s ease-out, filter 0.5s ease'
         }}
       >
         {/* Front Face: Surface Layer */}
@@ -150,7 +145,7 @@ export function CtfChallenge() {
       )}
 
       {/* Leaderboard - Fixed Position, Hidden when flipped */}
-      <Leaderboard solvedCount={solvedFlags.length} hidden={isFlipped} />
+      <Leaderboard solvedCount={solvedFlags.length} hidden={isFlipped} solvedFlags={solvedFlags} />
 
       {/* Flag 4: Hidden Element */}
       <div style={{ display: 'none' }} id="hidden-flag">
