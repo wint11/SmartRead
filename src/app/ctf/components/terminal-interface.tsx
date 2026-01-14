@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { HistoryItem } from "../hooks/use-ctf-game"
 
@@ -23,45 +23,95 @@ export function TerminalInterface({
   isProcessing,
   activeTool,
   isActive,
-  user = "ctf-user"
-}: TerminalInterfaceProps) {
+  user = "ctf-user",
+  isSnapshot = false
+}: TerminalInterfaceProps & { isSnapshot?: boolean }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [cursorPos, setCursorPos] = useState(0)
+  
+  // Sync cursor position when input changes (typing or history)
+  useEffect(() => {
+    if (inputRef.current && !isSnapshot) {
+        // When input value changes programmatically (e.g. history), React usually moves cursor to end.
+        // We sync our visual cursor to match.
+        setCursorPos(inputRef.current.selectionStart || 0)
+    }
+  }, [input, isSnapshot])
   
   // Auto scroll
   useEffect(() => {
-    if (isActive) {
+    if (isActive && !isSnapshot) {
         const timeoutId = setTimeout(() => {
             bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
         }, 10)
         return () => clearTimeout(timeoutId)
     }
-  }, [history, isActive])
+  }, [history, isActive, isSnapshot])
 
   // Focus management
   useEffect(() => {
-    if (isActive && !isProcessing) {
+    if (isActive && !isProcessing && !isSnapshot) {
         const timer = setTimeout(() => inputRef.current?.focus(), 10)
         return () => clearTimeout(timer)
     }
-  }, [isActive, isProcessing, history.length])
+  }, [isActive, isProcessing, history.length, isSnapshot])
 
   const handleClick = () => {
-      if (isActive) inputRef.current?.focus()
+      if (isActive && !isSnapshot) inputRef.current?.focus()
+  }
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Manually handle cursor keys for immediate visual feedback
+    if (!e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+        if (e.key === 'ArrowLeft') {
+            setCursorPos(prev => Math.max(0, prev - 1))
+        } else if (e.key === 'ArrowRight') {
+            setCursorPos(prev => Math.min(input.length, prev + 1))
+        } else if (e.key === 'Home') {
+            setCursorPos(0)
+        } else if (e.key === 'End') {
+            setCursorPos(input.length)
+        }
+    }
+
+    onKeyDown(e)
+    // Defer to allow native cursor movement to happen first (catches Ctrl+Left, etc.)
+    setTimeout(() => {
+        if (inputRef.current) {
+            setCursorPos(inputRef.current.selectionStart || 0)
+        }
+    }, 0)
   }
 
   const isRed = theme === 'red'
-  const textColor = isRed ? "text-red-200" : "text-gray-300"
-  const inputColor = isRed ? "text-red-400" : "text-blue-400"
-  const promptColor = isRed ? "text-red-500" : "text-green-500"
-  const cursorColor = isRed ? "bg-red-500/70" : "bg-white/70"
-  const borderColor = isRed ? "border-red-500/30" : "border-white/10"
-  const bgColor = isRed ? "bg-red-950/90" : "bg-black/90"
+  // Use CSS variables for theme-aware colors
+  // Revert text color to softer gray for better readability
+  // Dark mode: gray-300 (light gray)
+  // Light mode: gray-700 (dark gray) - NOT black, but readable
+  const textColor = isRed ? "text-red-200" : "text-gray-700 dark:text-gray-300"
   
+  // Dark mode: blue-400 (light blue)
+  // Light mode: blue-600 (darker blue)
+  const inputColor = isRed ? "text-red-400" : "text-blue-600 dark:text-blue-400"
+  
+  const promptColor = isRed ? "text-red-500" : "text-green-600 dark:text-green-400"
+  
+  // Simplified Cursor: Use a neutral gray for less visual noise
+  const cursorColor = isRed ? "bg-red-500" : "bg-gray-500 dark:bg-gray-400"
+  
+  const borderColor = isRed ? "border-red-500/30" : "border-border"
+  const bgColor = isRed ? "bg-red-950/90" : "bg-background border"
+  
+  const displayContent = activeTool === 'ssh_password' ? '*'.repeat(input.length) : input
+  const beforeCursor = displayContent.slice(0, cursorPos)
+  const cursorChar = displayContent.slice(cursorPos, cursorPos + 1)
+  const afterCursor = displayContent.slice(cursorPos + 1)
+
   return (
     <div 
         className={cn(
-            "absolute inset-0 rounded-lg border shadow-2xl p-4 font-mono text-sm overflow-hidden flex flex-col",
+            "absolute inset-0 rounded-lg shadow-2xl p-4 font-mono text-sm overflow-hidden flex flex-col",
             bgColor,
             isRed ? "border-red-500/30" : "border-border",
             !isActive && "pointer-events-none"
@@ -118,17 +168,26 @@ export function TerminalInterface({
                     ref={inputRef}
                     type={activeTool === 'ssh_password' ? 'password' : 'text'}
                     value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    className="absolute inset-0 w-full h-full bg-transparent outline-none border-none text-transparent caret-transparent p-0 m-0 cursor-text"
-                    autoFocus={isActive}
+                    onChange={e => {
+                        setInput(e.target.value)
+                        setCursorPos(e.target.selectionStart || 0)
+                    }}
+                    onKeyDown={handleInputKeyDown}
+                    onSelect={e => setCursorPos(e.currentTarget.selectionStart || 0)}
+                    onClick={e => setCursorPos(e.currentTarget.selectionStart || 0)}
+                    onKeyUp={e => setCursorPos(e.currentTarget.selectionStart || 0)}
+                    className="absolute inset-0 w-full h-full bg-transparent outline-none border-none text-transparent caret-transparent p-0 m-0 cursor-text font-mono text-sm"
+                    autoFocus={isActive && !isSnapshot}
                     spellCheck={false}
                     autoComplete="off"
-                    disabled={isProcessing || !isActive}
+                    disabled={isProcessing || !isActive || isSnapshot}
                   />
-                  <div className="pointer-events-none whitespace-pre-wrap break-all">
-                    {activeTool === 'ssh_password' ? '*'.repeat(input.length) : input}
-                    <span className={cn("inline-block w-2.5 h-5 animate-pulse align-middle ml-[1px] translate-y-[-1px]", cursorColor)}></span>
+                  <div className="pointer-events-none whitespace-pre-wrap break-all flex items-center flex-wrap">
+                    <span>{beforeCursor}</span>
+                    <span 
+                        className={cn("inline-block w-2.5 h-5 align-middle", !isSnapshot && "animate-blink", cursorColor)} 
+                    />
+                    <span>{cursorChar}{afterCursor}</span>
                   </div>
                </div>
             </div>

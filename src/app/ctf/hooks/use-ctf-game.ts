@@ -25,6 +25,44 @@ export const useCtfGame = () => {
   const [konamiIndex, setKonamiIndex] = useState(0)
   const [sudoFailCount, setSudoFailCount] = useState(0)
   
+  // New Effects State
+  const [commandNotFoundCount, setCommandNotFoundCount] = useState(0)
+  const [bombState, setBombState] = useState<{ active: boolean, timeLeft: number, exploded: boolean }>({ 
+    active: false, 
+    timeLeft: 300, // 5 minutes
+    exploded: false 
+  })
+
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Bomb Countdown Effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (bombState.active && !bombState.exploded && bombState.timeLeft > 0) {
+      timer = setInterval(() => {
+        setBombState(prev => {
+          // Check if we need to save state
+          const newState = { ...prev, timeLeft: prev.timeLeft - 1 }
+          
+          if (newState.timeLeft <= 0) {
+             const explodedState = { ...prev, timeLeft: 0, exploded: true }
+             localStorage.setItem('ctf_bomb_state', JSON.stringify(explodedState))
+             return explodedState
+          }
+          
+          // Save progress every second (or maybe less frequently to avoid perf issues, but 1s is fine for localstorage)
+          // This ensures that if they reload, the timer is roughly where it was
+          localStorage.setItem('ctf_bomb_state', JSON.stringify(newState))
+          return newState
+        })
+      }, 1000)
+    } else if (bombState.exploded) {
+       // Ensure exploded state is persisted
+       localStorage.setItem('ctf_bomb_state', JSON.stringify(bombState))
+    }
+    return () => clearInterval(timer)
+  }, [bombState.active, bombState.exploded, bombState.timeLeft])
+
   // Konami Code Sequence: ↑ ↑ ↓ ↓ ← → ← → B A
   const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']
 
@@ -34,6 +72,21 @@ export const useCtfGame = () => {
     const saved = localStorage.getItem('ctf_solved')
     if (saved) {
       setSolvedFlags(JSON.parse(saved))
+    }
+
+    // Load bomb state
+    try {
+        const savedBomb = localStorage.getItem('ctf_bomb_state')
+        if (savedBomb) {
+            const parsedBomb = JSON.parse(savedBomb)
+            // If it was already exploded, keep it exploded
+            // Also restore active state if it was counting down
+            if (parsedBomb.active) {
+                setBombState(parsedBomb)
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load bomb state", e)
     }
 
     // Initialize Web Flags
@@ -48,6 +101,7 @@ export const useCtfGame = () => {
     // Flag 9: LocalStorage
     localStorage.setItem('debug_config', 'flag{local_storage_is_not_secret_5566}')
     
+    setIsInitialized(true)
   }, [])
 
   const addToHistory = useCallback((type: 'input' | 'output', content: string) => {
@@ -180,7 +234,33 @@ export const useCtfGame = () => {
     }
   }
 
+  const resetGame = () => {
+    setHistory([
+      { type: 'output', content: "SmartRead CTF System v1.0.0" },
+      { type: 'output', content: "Type 'help' for available commands." },
+      { type: 'output', content: "Tip: Start by reading the README file using 'cat README'" },
+      { type: 'output', content: "" },
+      { type: 'output', content: "[SYSTEM] Terminal restored from backup." }
+    ])
+    setCommandNotFoundCount(0)
+    setInput("")
+    setActiveTool(null)
+    setIsProcessing(false)
+    
+    // Also reset bomb state? Or persist it?
+    // If "resetGame" is called from the shattering effect (which is just visual glitch), 
+    // we probably shouldn't reset the bomb if it's already exploded/active unless explicitly intended.
+    // But currently resetGame is only used for shattering recovery.
+    // If the bomb exploded, the game is over and UI is replaced, so resetGame won't be reachable via UI.
+    // However, if we want to provide a way to restart after GAME OVER, we might need a manual reset.
+    // For now, let's leave bomb state alone in resetGame so it persists across visual glitches.
+  }
+
   const processCommand = async (command: string, args: string[]) => {
+    // Reset consecutive error count by default for any command execution
+    // If it's an invalid command, the default case will override this
+    setCommandNotFoundCount(0)
+
     switch (command) {
       case 'help':
         addToHistory('output', `Available commands:
@@ -297,6 +377,7 @@ Good luck.
 
 
       case 'submit':
+        setCommandNotFoundCount(0)
         if (args.length === 0) {
           addToHistory('output', "Usage: submit <flag>")
           addToHistory('output', "Example: submit flag{welcome_to_smartread_ctf_2026}")
@@ -305,6 +386,15 @@ Good luck.
           const result = await verifyFlag(flag)
           if (result.success) {
             addToHistory('output', `[SUCCESS] ${result.message}`)
+            // Stop bomb if all flags (or specific ones) are solved? 
+            // For now, let's just pause/reset it if it was active? 
+            // Or maybe just leave it running as "system instability".
+            // Let's reset it to be kind.
+            if (bombState.active) {
+                setBombState(prev => ({ ...prev, active: false }))
+                addToHistory('output', "[SYSTEM] Threat level reduced. Countermeasures deactivated.")
+            }
+
             if (result.id && !solvedFlags.includes(result.id)) {
               const newSolved = [...solvedFlags, result.id].sort((a,b) => a-b)
               setSolvedFlags(newSolved)
@@ -313,6 +403,26 @@ Good luck.
             }
           } else {
             addToHistory('output', `[ERROR] ${result.message}`)
+            // Trigger Bomb Logic
+            if (!bombState.active) {
+                addToHistory('output', "[WARNING] UNAUTHORIZED ACCESS DETECTED.")
+                addToHistory('output', "[WARNING] SELF-DESTRUCT SEQUENCE INITIATED.")
+                setBombState({ active: true, timeLeft: 7200, exploded: false }) // Start with 2 hours
+            } else {
+                addToHistory('output', "[CRITICAL] INCORRECT CODE. ACCELERATING DETONATION.")
+                setBombState(prev => {
+                    const newTime = prev.timeLeft - 300
+                    if (newTime <= 0) {
+                        const newState = { ...prev, timeLeft: 0, exploded: true }
+                        localStorage.setItem('ctf_bomb_state', JSON.stringify(newState))
+                        return newState
+                    }
+                    // Save penalty update
+                    const updatedState = { ...prev, timeLeft: newTime }
+                    localStorage.setItem('ctf_bomb_state', JSON.stringify(updatedState))
+                    return updatedState
+                })
+            }
           }
         }
         break
@@ -795,6 +905,8 @@ flag_user:x:1001:1001:flag{path_traversal_expert_0011}:/home/flag_user:/bin/fals
 
       default:
         addToHistory('output', `${command}: command not found`)
+        // Increment error count for invalid commands, overriding the reset
+        setCommandNotFoundCount(commandNotFoundCount + 1)
     }
   }
 
@@ -808,6 +920,10 @@ flag_user:x:1001:1001:flag{path_traversal_expert_0011}:/home/flag_user:/bin/fals
     activeTool,
     isDeepLayer,
     isFlipped,
-    solvedFlags
+    solvedFlags,
+    commandNotFoundCount,
+    bombState,
+    resetGame,
+    isInitialized
   }
 }

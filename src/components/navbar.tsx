@@ -75,7 +75,7 @@ export async function Navbar() {
             <ModeToggle />
             {session ? (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger asChild id="user-menu-trigger">
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={session.user?.image || ""} alt={session.user?.name || ""} />
