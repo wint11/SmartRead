@@ -34,6 +34,11 @@ export function middleware(request: NextRequest, event: NextFetchEvent) {
     }).catch(err => console.error('Log fetch failed', err))
   );
 
+  // CTF Flag 2: HTTP Header
+  if (path.startsWith('/ctf')) {
+    response.headers.set('X-CTF-Flag', 'flag{header_is_key_7733}')
+  }
+
   return response;
 }
 
