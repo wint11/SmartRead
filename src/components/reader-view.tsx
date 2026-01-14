@@ -21,6 +21,7 @@ interface ReaderViewProps {
     id: string
     title: string
     order: number
+    content: string
   }>
 }
 

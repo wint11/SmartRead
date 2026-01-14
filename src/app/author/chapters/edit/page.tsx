@@ -46,7 +46,7 @@ export default async function EditChapterPage({ searchParams }: { searchParams: 
         <div className="text-red-500">找不到该作品或无权访问</div>
       )}
 
-      {selectedWork && (
+      {selectedWork && novelId && (
         <EditChapterClient novelId={novelId} chapters={chapters} />
       )}
 

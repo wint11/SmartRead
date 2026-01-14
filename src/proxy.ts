@@ -6,7 +6,7 @@ const rateLimit = new Map<string, { count: number; lastReset: number }>();
 const WINDOW_SIZE = 60 * 1000; // 1 minute
 const MAX_REQUESTS = 100; // 100 requests per minute
 
-export function middleware(request: NextRequest, event: NextFetchEvent) {
+export function proxy(request: NextRequest, event: NextFetchEvent) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown';
   const path = request.nextUrl.pathname;
   const search = request.nextUrl.search;

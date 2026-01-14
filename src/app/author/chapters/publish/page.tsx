@@ -52,7 +52,7 @@ export default async function PublishChapterPage({ searchParams }: { searchParam
         <div className="text-red-500">找不到该作品或无权访问</div>
       )}
 
-      {selectedWork && (
+      {selectedWork && novelId && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1 space-y-6">
             <Card>
