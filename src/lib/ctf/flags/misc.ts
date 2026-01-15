@@ -10,6 +10,7 @@ export const MISC_FLAGS = {
   49: "flag{sudo_incident_reported_santa_claus}", // sudo fail
   50: "flag{have_you_tried_turning_it_off_and_on_again}", // reboot
   51: "flag{zip_files_are_fun_9988}", // Unzip
+  99: "flag{snake_charmer_master_8822}", // Snake Game
 } as const
 
 export const MISC_HINTS = {
@@ -24,4 +25,5 @@ export const MISC_HINTS = {
   49: "Fail to be root multiple times.",
   50: "Classic IT support fix.",
   51: "Extract the backup archive.",
+  99: "Launch the snake protocol.",
 } as const

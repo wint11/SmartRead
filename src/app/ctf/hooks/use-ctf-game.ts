@@ -29,6 +29,7 @@ export function useCtfGame() {
   const [isFlipped, setIsFlipped] = useState(false)
   const [solvedFlags, setSolvedFlags] = useState<number[]>([])
   const [commandNotFoundCount, setCommandNotFoundCount] = useState(0)
+  const [isSnakeActive, setSnakeActive] = useState(false)
   
   // Gameplay Mechanics
   const { bombState, setBombState, resetBomb } = useBombMechanic()
@@ -152,6 +153,8 @@ export function useCtfGame() {
         setCommandNotFoundCount,
         activeTool,
         setActiveTool,
+        isSnakeActive,
+        setSnakeActive,
         resetGame,
         clearHistory
     };
@@ -320,6 +323,8 @@ export function useCtfGame() {
     resetGame,
     isInitialized,
     currentPath,
-    currentUser
+    currentUser,
+    isSnakeActive,
+    setSnakeActive
   }
 }

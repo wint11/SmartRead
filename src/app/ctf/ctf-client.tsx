@@ -7,11 +7,14 @@ import { Leaderboard } from "./components/leaderboard"
 import { ShatteredEffect } from "./components/shattered-effect"
 import { BombEffect } from "./components/bomb-effect"
 import { TerminalShatter } from "./components/terminal-shatter"
+import { SnakeGame, restoreGlobalState } from "./components/snake-game"
 import { useShatterMechanic } from "./gameplay/shatter"
-import { useEffect } from "react"
+import { useState, useEffect } from "react"
 import { setCtfCookie } from "./actions"
 
 export function CtfChallenge() {
+  const gameHook = useCtfGame();
+  
   const {
     history,
     input,
@@ -26,7 +29,11 @@ export function CtfChallenge() {
     bombState,
     resetGame,
     isInitialized
-  } = useCtfGame()
+  } = gameHook;
+  
+  // Safe access to new properties with fallback
+  const isSnakeActive = (gameHook as any).isSnakeActive || false;
+  const setSnakeActive = (gameHook as any).setSnakeActive || (() => {});
 
   const { visualState, isShattered } = useShatterMechanic(commandNotFoundCount, resetGame)
 
@@ -45,6 +52,11 @@ export function CtfChallenge() {
     
     // Trigger Hint Request for Flag 12
     fetch('/api/ctf/hint').catch(console.error)
+    
+    // Cleanup global snake game state on unmount
+    return () => {
+        restoreGlobalState();
+    };
   }, [])
 
   if (!isInitialized) return null
@@ -82,10 +94,13 @@ export function CtfChallenge() {
         exploded={bombState.exploded} 
       />
 
+      <SnakeGame active={isSnakeActive} onExit={() => setSnakeActive(false)} />
+
       {/* Main Terminal Container */}
       {/* Hide completely if shattering OR exploded */}
       {visualState !== 'shattering' && !bombState.exploded && (
       <div 
+        id="ctf-terminal-main"
         className={cn(
           "relative w-full h-full",
           (isShattered || isBombCritical) && "animate-pulse"
@@ -99,7 +114,9 @@ export function CtfChallenge() {
             // Apply distortion during system failure
             filter: visualState === 'system_failure' ? 'blur(2px) contrast(1.5) grayscale(0.8)' : (isShattered ? 'blur(1px) contrast(1.2)' : 'none'),
             // Instant hide for shattering, slow fade in for normal
-            transition: visualState === 'shattering' ? 'none' : 'transform 1s ease-in-out, opacity 1s ease-out, filter 0.5s ease'
+            transition: visualState === 'shattering' ? 'none' : 'transform 1s ease-in-out, opacity 1s ease-out, filter 0.5s ease',
+            // Ensure terminal is visible underneath the snake game overlay
+            visibility: 'visible'
         }}
       >
         {/* Front Face: Surface Layer */}
@@ -111,7 +128,7 @@ export function CtfChallenge() {
             onKeyDown={handleKeyDown}
             isProcessing={isProcessing}
             activeTool={activeTool}
-            isActive={!isFlipped && visualState === 'normal'} // Disable input when not normal
+            isActive={!isFlipped && visualState === 'normal' && !isSnakeActive} // Disable input when not normal
             user="ctf-user"
         />
         
@@ -124,7 +141,7 @@ export function CtfChallenge() {
             onKeyDown={handleKeyDown}
             isProcessing={isProcessing}
             activeTool={activeTool}
-            isActive={isFlipped && visualState === 'normal'}
+            isActive={isFlipped && visualState === 'normal' && !isSnakeActive}
             user="root"
         />
       </div>

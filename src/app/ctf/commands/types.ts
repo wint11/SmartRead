@@ -22,6 +22,8 @@ export type CommandContext = {
     setCommandNotFoundCount: Dispatch<SetStateAction<number>>
     activeTool: string | null
     setActiveTool: Dispatch<SetStateAction<string | null>>
+    isSnakeActive: boolean
+    setSnakeActive: Dispatch<SetStateAction<boolean>>
     resetGame: () => void
     clearHistory: () => void
 }

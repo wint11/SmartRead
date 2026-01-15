@@ -63,6 +63,7 @@ export const STANDARD_TASKS: Challenge[] = [
     { id: 50, title: "Reboot", description: "Try to reboot the system.", hint: "Have you tried turning it off and on again?", points: 10, category: 'misc' },
     { id: 51, title: "Archive Extraction", description: "Unzip the backup file.", hint: "Use 'unzip <file>'.", points: 20, category: 'misc' },
     { id: 60, title: "Strings Attached", description: "Analyze the 'firmware.bin' file for readable strings.", hint: "Use 'strings firmware.bin'.", points: 30, category: 'system' },
+    { id: 99, title: "Snake Charmer", description: "Find the secret snake game and eat the special fruit.", hint: "Type 'snake' in the terminal.", points: 50, category: 'misc' },
 ];
 
 export const ROOT_TASKS: Challenge[] = [

@@ -6,6 +6,7 @@ import * as networkCommands from "./network"
 import * as gameCommands from "./game"
 import * as toolCommands from "./tools"
 import * as easterEggs from "./easter-eggs"
+import * as snakeCommand from "../gameplay/snake"
 
 const commands: Record<string, CommandHandler> = {
     // Filesystem
@@ -75,6 +76,9 @@ const commands: Record<string, CommandHandler> = {
     brew: easterEggs.teapot,
     coffee: easterEggs.teapot,
     tea: easterEggs.teapot,
+    
+    // Mini Games
+    snake: snakeCommand.snake,
 }
 
 export const executeCommand = async (command: string, args: string[], context: CommandContext) => {

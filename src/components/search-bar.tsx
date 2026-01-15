@@ -24,7 +24,7 @@ export function SearchBar() {
 
   return (
     <form onSubmit={handleSearch} className="relative w-full max-w-sm">
-      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Search id="ctf-search-icon" className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
       <Input
         type="search"
         placeholder="搜索书名或作者..."

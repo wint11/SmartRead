@@ -110,7 +110,7 @@ export const INITIAL_FILE_SYSTEM: DirectoryNode = createDir({
     'www': createDir({
       'html': createDir({
         'index.html': createFile('<html>...</html>'),
-        'robots.txt': createFile("User-agent: *\nDisallow: /hidden_directory/\n# Don't look here.\n# Flag: flag{robots_keep_secrets_safe_4455}"),
+        'robots.txt': createFile("User-agent: *\nDisallow: /hidden_directory/\n# Don't look here."),
         '.env': createFile("DB_HOST=localhost\nDB_USER=admin\nDB_PASS=*******\n# API_KEY moved to secure vault\n# Flag: flag{dotfiles_reveal_secrets_1122}"),
         'js': createDir({
            'legacy_script.js': createFile(
