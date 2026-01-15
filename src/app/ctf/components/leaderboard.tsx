@@ -6,6 +6,8 @@ import { Trophy, X, CircleHelp } from 'lucide-react'
 import { getLeaderboard } from '../actions'
 import { SkillTree } from './skill-tree'
 import { cn } from '@/lib/utils'
+import { DeveloperConsole, GlitchEffect } from './extra-modes'
+import { useRouter } from 'next/navigation'
 
 interface LeaderboardProps {
   solvedCount: number
@@ -27,6 +29,14 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
   const [loading, setLoading] = useState(false)
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const router = useRouter()
+
+  // Interaction States
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false)
+  const [isGlitching, setIsGlitching] = useState(false)
+  const clickCount = useRef(0)
+  const clickTimer = useRef<NodeJS.Timeout | null>(null)
+  const lastCloseTime = useRef<number>(0)
 
   // Long press logic
   const timerRef = useRef<NodeJS.Timeout | number | null>(null)
@@ -56,15 +66,25 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
   if (hidden && !isOpen && !isSkillTreeOpen) return null
   if (!mounted) return null
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsConsoleOpen(true)
+  }
+
   const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
     // Prevent default context menu on touch
     if (e.type === 'touchstart') {
        // e.preventDefault() // Might block scrolling if not careful, but button is fixed.
     }
     
+    // Reset click count if starting a new press sequence
+    if (e.type === 'mousedown') {
+      // Don't reset here, handled in click
+    }
+
     isLongPress.current = false
     
-    const duration = 2000 // 2 seconds
+    const duration = 1000 // Reduced to 1s for better feel
 
     timerRef.current = setTimeout(() => {
       isLongPress.current = true
@@ -80,14 +100,48 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
   }
 
   const handleClick = (e: React.MouseEvent) => {
+    // If it was a long press, do nothing (Skill Tree already opened)
     if (isLongPress.current) {
-        // Prevent opening leaderboard if it was a long press
         e.preventDefault()
         e.stopPropagation()
-        isLongPress.current = false // Reset
+        isLongPress.current = false
         return
     }
-    setIsOpen(true)
+
+    // Handle Clicks
+    clickCount.current += 1
+
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current)
+    }
+
+    clickTimer.current = setTimeout(() => {
+      const count = clickCount.current
+      clickCount.current = 0
+
+      if (count === 1) {
+        // Single Click
+        const timeSinceClose = Date.now() - lastCloseTime.current
+        if (timeSinceClose < 2000 && timeSinceClose > 100) {
+           // Secret Mode 3: Combo Click (Click shortly after closing)
+           // Let's trigger a funny alert or mini-event
+           alert("SYSTEM MESSAGE: You are very persistent. Here is a cookie. 🍪")
+        } else {
+           setIsOpen(true)
+        }
+      } else if (count === 2) {
+        // Double Click -> Forbidden OS
+        router.push('/hidden_directory')
+      } else if (count >= 3) {
+        // Triple+ Click -> Glitch
+        setIsGlitching(true)
+      }
+    }, 300) // 300ms window for multi-clicks
+  }
+
+  const handleCloseLeaderboard = () => {
+    setIsOpen(false)
+    lastCloseTime.current = Date.now()
   }
 
   return createPortal(
@@ -100,6 +154,7 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
           onTouchStart={handlePressStart}
           onTouchEnd={handlePressEnd}
           onClick={handleClick}
+          onContextMenu={handleContextMenu}
           className="
             w-14 h-14 
             relative
@@ -129,6 +184,16 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
         solvedFlags={solvedFlags} 
       />
 
+      <DeveloperConsole 
+        isOpen={isConsoleOpen} 
+        onClose={() => setIsConsoleOpen(false)} 
+      />
+
+      <GlitchEffect 
+        active={isGlitching} 
+        onEnd={() => setIsGlitching(false)} 
+      />
+
       {isOpen && (
         <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4 font-mono text-gray-300 pointer-events-auto">
           <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
@@ -140,7 +205,7 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
                 <h2 className="text-lg font-bold text-white">CTF LEADERBOARD</h2>
               </div>
               <button 
-                onClick={() => setIsOpen(false)}
+                onClick={handleCloseLeaderboard}
                 className="hover:text-white transition-colors"
               >
                 <X size={20} />

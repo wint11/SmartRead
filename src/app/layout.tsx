@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Navbar } from "@/components/navbar";
+import { NavbarWrapper } from "@/components/navbar-wrapper";
+import { MainWrapper } from "@/components/main-wrapper";
 import { Footer } from "@/components/footer";
 import { Toaster } from "sonner";
 
@@ -40,8 +42,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
-          <main className="flex-1 pt-16">{children}</main>
+          <NavbarWrapper>
+            <Navbar />
+          </NavbarWrapper>
+          <MainWrapper>{children}</MainWrapper>
           <Footer />
           <Toaster />
         </ThemeProvider>

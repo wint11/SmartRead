@@ -44,6 +44,32 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
   // Ghost Mode State
   const [isGhostMode, setIsGhostMode] = React.useState(false)
   const [ghostTriggerCount, setGhostTriggerCount] = React.useState(0)
+  const [showTimeRift, setShowTimeRift] = React.useState(false)
+
+  // Time detection for Time Traveler
+  React.useEffect(() => {
+    if (!isGhostMode) {
+        setShowTimeRift(false)
+        return
+    }
+
+    const checkTime = () => {
+         const now = new Date()
+         const seconds = now.getSeconds()
+         // Show for a wider window (42s to 45s) to give user time to click
+         if (seconds >= 42 && seconds <= 45) {
+             setShowTimeRift(true)
+         } else {
+             setShowTimeRift(false)
+         }
+     }
+
+    // Check immediately
+    checkTime()
+
+    const timer = setInterval(checkTime, 250)
+    return () => clearInterval(timer)
+  }, [isGhostMode])
   
   // Refs for scrolling and sync
   const contentScrollRef = React.useRef<HTMLDivElement | null>(null)
@@ -498,6 +524,28 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
                   </Link>
                 )
               })}
+
+              {/* Ghost Chapter Link */}
+              {isGhostMode && (
+                <Link
+                  href="/novel/ghost-writing"
+                  className={cn(
+                    "group relative flex items-center gap-3 px-2 transition-all duration-300 mt-8",
+                    "opacity-60 hover:opacity-100"
+                  )}
+                  style={{ height: TREE_ITEM_HEIGHT }}
+                >
+                  <span className={cn(
+                    "relative z-10 size-3 rounded-full border-2 transition-all animate-pulse",
+                    "bg-red-900 border-red-500"
+                  )} />
+                  <span className={cn(
+                    "truncate text-sm transition-all font-mono text-red-500 glitch-text"
+                  )} data-text="???">
+                    The Infinite Story
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -506,6 +554,18 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
         <div 
           className="h-full w-full relative"
         >
+           {/* Time Rift Overlay */}
+           {showTimeRift && (
+               <div className="absolute top-4 right-4 z-50 animate-pulse">
+                   <Link 
+                     href="/novel/time-rift" 
+                     className="text-red-500 font-mono text-sm border border-red-500 px-3 py-1 bg-black/80 hover:bg-red-900/50 transition-colors"
+                   >
+                       [TIME_RIFT_DETECTED]
+                   </Link>
+               </div>
+           )}
+
            {/* Container for centering content */}
           <div 
             ref={contentScrollRef}

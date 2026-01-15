@@ -3,6 +3,7 @@ import { NovelCard } from "@/components/novel-card"
 import Link from "next/link"
 import { ArrowRight, Flame, Sparkles } from "lucide-react"
 import { HeroCarousel } from "@/components/home/hero-carousel"
+import { Fragment } from "react"
 
 export default async function Home() {
   const [recommendedNovels, popularNovels, newNovels] = await Promise.all([
@@ -66,8 +67,13 @@ export default async function Home() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {newNovels.map((novel) => (
-              <NovelCard key={novel.id} novel={novel} />
+            {newNovels.map((novel, index) => (
+              <Fragment key={novel.id}>
+                <NovelCard 
+                  novel={novel} 
+                  isGlitchTarget={index === 2} // Target the 3rd book for the glitch effect
+                />
+              </Fragment>
             ))}
           </div>
         </section>

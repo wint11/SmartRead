@@ -122,3 +122,11 @@ model AppSetting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model GhostMessage {
+  id        String   @id @default(cuid())
+  content   String
+  author    String?  @default("ANONYMOUS") // Username or "ANONYMOUS"
+  type      String   @default("user") // user, system, story, flag, hint
+  createdAt DateTime @default(now())
+}

@@ -12,6 +12,8 @@ export const MISC_FLAGS = {
   51: "flag{zip_files_are_fun_9988}", // Unzip
   99: "flag{snake_charmer_master_8822}", // Snake Game
   100: "flag{y0u_h4v3_th3_3y3s_0f_7ru7h}", // Ghost Mode
+  102: "flag{time_traveler_paradox_4242}", // Time Traveler
+  103: "flag{collective_consciousness_writer}", // Infinite Story
 } as const
 
 export const MISC_HINTS = {

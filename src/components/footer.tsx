@@ -19,6 +19,7 @@ export function Footer() {
                      pathname?.startsWith("/novel/") ||
                      pathname?.startsWith("/author") ||
                      pathname?.startsWith("/ctf") ||
+                     pathname?.startsWith("/hidden_directory") ||
                      pathname === "/login"
 
   if (shouldHide) {
@@ -66,7 +67,6 @@ export function Footer() {
               <li><Link href="/rank" className="hover:text-primary transition-colors">排行榜</Link></li>
               <li><Link href="/bookshelf" className="hover:text-primary transition-colors">我的书架</Link></li>
               <li><Link href="/author" className="hover:text-primary transition-colors">作者专区</Link></li>
-              <li><Link href="/ctf" className="hover:text-primary transition-colors">CTF 挑战</Link></li>
               <li><Link href="/help" className="hover:text-primary transition-colors">帮助中心</Link></li>
             </ul>
           </div>
