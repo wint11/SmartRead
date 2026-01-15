@@ -1,145 +1,112 @@
-# Next.js 小说平台（中文版说明）
+# SmartRead - 智能小说阅读与创作平台
 
-本项目基于 [Next.js](https://nextjs.org)（由 [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app) 初始化），当前实现为一个带有读者/作者/管理员体系的在线阅读与内容管理应用。
+SmartRead 是一个基于 **Next.js 16 (App Router)** 全栈开发的现代化在线小说平台。它不仅提供了完善的小说阅读、创作和管理功能，还创新性地集成了 **CTF (Capture The Flag)** 安全挑战模块和 **AI 内容预审** 机制，是一个集娱乐、创作与技术探索于一体的综合性应用。
 
-## 功能概览
+## ✨ 核心功能
 
-- **读者侧**：浏览、搜索、书架、阅读器、个人中心等页面
-- **作者侧**：作品管理、创建作品、为作品新增章节（带归属校验）
-- **管理侧**：用户管理、文章审核相关页面、审计记录查看等
-- **日志系统**
-  - 请求日志：中间件采集请求信息，写入本地 `logs/` 按天分文件（目录会自动创建且已被 Git 忽略）
-  - 审计日志：关键操作写入数据库 `AuditLog` 表
+### 📚 沉浸式阅读体验
+- **阅读器**: 专注模式、字体大小调节、目录跳转。
+- **书架系统**: 收藏喜爱的小说，记录阅读进度。
+- **个性化**: 支持深色/浅色主题切换 (`next-themes`)。
+- **发现**: 首页轮播推荐、分类浏览与搜索功能。
 
-## 技术栈
+### ✍️ 创作者中心
+- **作品管理**: 创建新书、编辑元数据、上传封面。
+- **章节创作**: 在线编辑器，支持章节预览与发布。
+- **权限隔离**: 严格的作者权限校验，确保数据安全。
 
-- Next.js App Router（`src/app`）
-- NextAuth（Credentials 登录）
-- Prisma + SQLite（默认）
-- Tailwind CSS + shadcn/ui（Radix UI 组件）
-- Zod（表单/入参校验）
-- next-themes（深色/浅色主题）
+### 🛡️ 管理与安全
+- **RBAC 权限体系**: 细分为 读者 (USER)、作者 (AUTHOR)、管理员 (ADMIN)、超级管理员 (SUPER_ADMIN)。
+- **用户管理**: 封禁/解封用户、重置密码、角色变更。
+- **内容审核**: 文章与章节的双重审核流。
+- **审计与日志**:
+  - **审计日志**: 记录关键操作（如封号、删除作品）到数据库。
+  - **请求日志**: 每日请求流水文件记录 (`/logs`)，便于流量分析与溯源。
 
-## 目录结构（简要）
+### 🚩 CTF 安全挑战 (特色)
+内置了一个完整的 CTF 游戏系统，隐藏在 `/ctf` 路由下：
+- **终端模拟器**: 仿 Linux 终端交互，支持文件系统浏览与命令执行。
+- **技能树**: 包含 Web 安全、密码学、逆向工程等挑战。
+- **彩蛋游戏**: 贪吃蛇、炸弹拆除等趣味小游戏。
+- **隐藏线索**: 散布在应用各处的 Flag 等待挖掘。
+
+### 🤖 AI 智能集成
+- **内容预审**: 提交章节时自动进行 AI 质量检测与合规性扫描。
+- **数据结构预留**: 数据库已为 AI 评分、智能推荐预留字段。
+
+## 🛠 技术栈
+
+- **框架**: [Next.js 16](https://nextjs.org/) (App Router)
+- **UI 库**: [React 19](https://react.dev/), [Tailwind CSS v4](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/)
+- **数据库**: [Prisma](https://www.prisma.io/) (ORM), SQLite (默认)
+- **认证**: [NextAuth.js v5](https://authjs.dev/) (Credentials Provider)
+- **表单与验证**: [React Hook Form](https://react-hook-form.com/), [Zod](https://zod.dev/)
+- **动画**: framer-motion, tw-animate-css
+
+## 📂 项目结构
 
 ```text
 .
-├─ prisma/                Prisma schema 与种子数据脚本
-├─ public/                静态资源
-├─ src/
-│  ├─ app/                路由与页面（含 /api 接口）
-│  │  ├─ admin/           管理后台（用户/文章/审计等）
-│  │  ├─ author/          作者中心（作品/章节）
-│  │  ├─ api/             API 路由（认证、日志、seed 等）
-│  │  └─ ...              浏览/搜索/书架/登录/阅读等页面
-│  ├─ components/         业务组件与 UI 组件
-│  ├─ lib/                Prisma、日志、审计等基础能力
-│  └─ types/              类型声明（含 next-auth 扩展）
-└─ next.config.ts         Next.js 配置（含 CSP/安全相关 headers）
+├── prisma/                 # 数据库 Schema 与迁移文件
+├── public/                 # 静态资源
+├── src/
+│   ├── app/                # App Router 路由定义
+│   │   ├── admin/          # 管理员后台 (用户/审核/审计)
+│   │   ├── author/         # 作者工作台 (作品/章节管理)
+│   │   ├── ctf/            # CTF 挑战平台 (终端/游戏/题目)
+│   │   ├── api/            # 后端 API 路由
+│   │   └── ...             # 首页、阅读、书架等公共页面
+│   ├── components/         # React 组件 (UI/业务)
+│   ├── lib/                # 工具库 (Prisma, Logger, AI, Audit)
+│   └── types/              # TypeScript 类型定义
+└── logs/                   # (自动生成) 每日请求日志
 ```
 
-## 快速开始
+## 🚀 快速开始
 
-### 1) 安装依赖
+### 1. 环境准备
+确保你的环境中已安装 Node.js (推荐 v18+)。
 
+### 2. 安装依赖
 ```bash
 npm install
 ```
 
-### 2) 配置环境变量
-
-项目默认使用 SQLite，需提供 `DATABASE_URL`。例如在项目根目录创建 `.env`：
-
+### 3. 配置数据库
+项目默认使用 SQLite，开箱即用。
 ```bash
-DATABASE_URL="file:./prisma/dev.db"
-```
+# 生成 Prisma Client
+npx prisma generate
 
-### 3) 初始化数据库（Prisma）
-
-```bash
+# 运行数据库迁移
 npx prisma migrate dev
 ```
 
-### 4) 写入演示数据（可选）
-
-本仓库提供了种子脚本 `prisma/seed.ts`，可用 `tsx` 直接执行：
-
+### 4. 初始化数据 (Seed)
+使用种子脚本创建默认的管理员、作者和读者账号，以及一些初始小说数据。
 ```bash
 npx tsx prisma/seed.ts
 ```
+**默认账号:**
+- 超级管理员: `admin@example.com` / `123456`
+- 作者: `author@example.com` / `123456`
+- 读者: `user@example.com` / `123456`
 
-脚本会生成演示账号（密码均为 `123456`）：
-
-- 超级管理员：`admin@example.com`
-- 作者：`author@example.com`
-- 读者：`user@example.com`
-
-另外也提供了一个 API 形式的 seed（用于快速写入少量演示数据）：`GET /api/seed`。
-
-### 5) 启动开发服务器
-
+### 5. 启动开发服务器
 ```bash
 npm run dev
-# 或 yarn dev / pnpm dev / bun dev
 ```
+访问 [http://localhost:3000](http://localhost:3000) 开始体验。
 
-浏览器打开 [http://localhost:3000](http://localhost:3000)。
+## 📝 最近更新 (2026-01-15)
 
-页面入口位于 `src/app/page.tsx`，编辑后会自动热更新。
+### 新增功能
+- **CTF 模块上线**: 包含终端模拟器、排行榜及多种类型的安全挑战。
+- **AI 预审流程**: 章节发布通过 `ai-pre-review` 进行初步质量评估。
+- **高级用户管理**: 超级管理员现可直接在后台修改用户角色、重置密码及封禁账号。
+- **日志系统升级**: 实现了基于文件的每日请求日志记录，增强了系统的可观测性。
 
-## 请求日志与审计日志
-
-- **请求日志**
-  - 采集位置：`src/middleware.ts`
-  - 写入位置：`src/lib/logger.ts`（写入 `logs/YYYY-MM-DD.log`）
-  - 说明：`logs/` 目录会自动创建，且已在 `.gitignore` 中忽略
-- **审计日志**
-  - 写入方法：`src/lib/audit.ts` 的 `logAudit`
-  - 存储位置：数据库表 `AuditLog`
-
-## 项目更新与变更记录（2026-01-13）
-
-### 1. Bug 修复
-
-- **登录重定向**：修复超级管理员登录成功后仍停留在登录页的问题，添加显式 `redirectTo: "/"` 参数
-- **后台文章审核**：修复因 session 为空导致的运行时错误
-- **页脚布局**：修正页脚布局，使内容正确居中（`mx-auto px-4`）
-- **作者提交作品**：修复作者提交新作品时报 `ReferenceError: logAudit is not defined`
-- **类型安全**：修复作者相关 actions 中 Prisma schema 的 `uploaderId` 与 `type` 字段类型不匹配
-
-### 2. 新增功能
-
-- **用户管理（超级管理员）**
-  - 用户列表新增操作菜单
-  - 支持重置密码为默认值（`password123`）
-  - 支持用户角色调整（USER、AUTHOR、ADMIN）
-  - 支持封禁/解封（`ACTIVE`/`BANNED`）
-  - 被封禁用户无法创建新作品
-  - UI 调整：对超级管理员隐藏“文章审核”入口（仅管理员任务）
-
-- **作者章节管理**
-  - 作者新增章节的管理界面
-  - 作者作品列表新增“新增章节”按钮
-  - 新增章节带归属校验（只能为自己的作品新增章节）
-  - 章节创建事件接入审计日志
-
-- **请求日志系统**
-  - 实现基于文件的按天请求日志（`/logs`）
-  - 日志包含：时间戳、方法、URL、IP、User-Agent
-  - 架构：
-    - Middleware 采集请求信息
-    - 异步调用内部 `/api/log` 接口写入
-    - `src/lib/logger.ts` 负责落盘（例如 `logs/2026-01-13.log`）
-
-## 了解更多
-
-- [Next.js 文档](https://nextjs.org/docs) - 了解 Next.js 功能与 API
-- [Learn Next.js](https://nextjs.org/learn) - 交互式学习教程
-- [Next.js GitHub 仓库](https://github.com/vercel/next.js) - 欢迎反馈与贡献
-
-## 部署到 Vercel
-
-最简单的方式是使用 [Vercel 平台](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) 进行部署。
-
-更多部署细节请参考 [Next.js 部署文档](https://nextjs.org/docs/app/building-your-application/deploying)。
-
+### 优化与修复
+- 升级至 **Next.js 16** 与 **React 19**。
+- 修复了登录重定向、作者权限校验及页脚布局等已知问题。
+- 优化了数据库模型，增加了对 AI 审核状态的完整支持。

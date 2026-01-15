@@ -1,68 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SmartRead - Intelligent Novel Reading & Creation Platform
 
-## Getting Started
+SmartRead is a modern, full-stack online novel platform built with **Next.js 16 (App Router)**. Beyond standard reading, writing, and management features, it innovatively integrates a **CTF (Capture The Flag)** security challenge module and **AI content pre-review** mechanisms, making it a comprehensive application for entertainment, creativity, and technical exploration.
 
-First, run the development server:
+## ✨ Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### 📚 Immersive Reading Experience
+- **Reader View**: Focus mode, font resizing, and table of contents navigation.
+- **Bookshelf**: Track reading progress and bookmark favorite novels.
+- **Personalization**: Dark/Light mode support via `next-themes`.
+- **Discovery**: Homepage carousel, category browsing, and search functionality.
+
+### ✍️ Creator Center
+- **Work Management**: Create new novels, edit metadata, and upload covers.
+- **Chapter Creation**: Online editor with preview and publishing capabilities.
+- **Security**: Strict ownership verification ensures data integrity for authors.
+
+### 🛡️ Administration & Security
+- **RBAC System**: Granular roles: Reader (USER), Author (AUTHOR), Admin (ADMIN), Super Admin (SUPER_ADMIN).
+- **User Management**: Ban/Unban users, reset passwords, and modify roles.
+- **Content Moderation**: Dual-audit workflows for novels and chapters.
+- **Audit & Logging**:
+  - **Audit Logs**: Database recording of critical actions (e.g., bans, deletions).
+  - **Request Logs**: Daily file-based request logs (`/logs`) for traffic analysis.
+
+### 🚩 CTF Security Challenges (Featured)
+A complete CTF game system hidden under the `/ctf` route:
+- **Terminal Simulator**: Linux-like terminal interface with file system navigation.
+- **Skill Tree**: Challenges covering Web Security, Cryptography, and Reverse Engineering.
+- **Mini-Games**: Easter eggs like Snake and Bomb Defusal.
+- **Hidden Flags**: Clues scattered throughout the application waiting to be discovered.
+
+### 🤖 AI Integration
+- **Content Pre-review**: Automated AI quality checks and compliance scanning upon chapter submission.
+- **Future-Ready**: Database schema reserved for AI scoring and intelligent recommendations.
+
+## 🛠 Tech Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **UI Library**: [React 19](https://react.dev/), [Tailwind CSS v4](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/)
+- **Database**: [Prisma](https://www.prisma.io/) (ORM), SQLite (Default)
+- **Authentication**: [NextAuth.js v5](https://authjs.dev/) (Credentials Provider)
+- **Validation**: [React Hook Form](https://react-hook-form.com/), [Zod](https://zod.dev/)
+- **Animation**: framer-motion, tw-animate-css
+
+## 📂 Project Structure
+
+```text
+.
+├── prisma/                 # Database Schema & Migrations
+├── public/                 # Static Assets
+├── src/
+│   ├── app/                # App Router Definitions
+│   │   ├── admin/          # Admin Dashboard (Users/Audit)
+│   │   ├── author/         # Author Studio (Works/Chapters)
+│   │   ├── ctf/            # CTF Platform (Terminal/Games)
+│   │   ├── api/            # Backend API Routes
+│   │   └── ...             # Public pages (Home, Reader, etc.)
+│   ├── components/         # React Components (UI/Business)
+│   ├── lib/                # Utilities (Prisma, Logger, AI, Audit)
+│   └── types/              # TypeScript Type Definitions
+└── logs/                   # (Auto-generated) Daily Request Logs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Prerequisites
+Ensure you have Node.js installed (v18+ recommended).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-## Project Updates & Changelog (2026-01-13)
+### 3. Database Setup
+The project uses SQLite by default.
+```bash
+# Generate Prisma Client
+npx prisma generate
 
-### 1. Bug Fixes
-- **Login Redirect**: Fixed an issue where super admins remained on the login page after successful authentication. Added explicit `redirectTo: "/"` parameter.
-- **Admin Article Review**: Fixed a runtime error in the admin article review interface caused by null session references.
-- **Footer Layout**: Corrected the footer layout to ensure content is properly centered (`mx-auto px-4`).
-- **Author Work Submission**: Resolved a `ReferenceError: logAudit is not defined` when authors submitted new works.
-- **Type Safety**: Fixed Prisma schema type mismatches for `uploaderId` and `type` fields in author actions.
+# Run Database Migrations
+npx prisma migrate dev
+```
 
-### 2. New Features
-- **User Management (Super Admin)**:
-  - **Enhanced UI**: Added action menu to user list.
-  - **Reset Password**: Ability to reset user passwords to default (`password123`).
-  - **Role Control**: Ability to change user roles (USER, AUTHOR, ADMIN).
-  - **Account Status**: Implemented Ban/Unban functionality (`ACTIVE`/`BANNED` status).
-  - **Access Control**: Banned users are prevented from creating new works.
-  - **UI Adjustment**: Hidden "Article Audit" link for Super Admins (Admin only task).
+### 4. Initialize Data (Seed)
+Use the seed script to create default admin, author, and user accounts, along with sample data.
+```bash
+npx tsx prisma/seed.ts
+```
+**Default Accounts:**
+- Super Admin: `admin@example.com` / `123456`
+- Author: `author@example.com` / `123456`
+- Reader: `user@example.com` / `123456`
 
-- **Author Chapter Management**:
-  - Implemented a new interface for authors to add chapters to their works.
-  - Added "Add Chapter" (新增章节) button to the author's work management list.
-  - Secured chapter creation with ownership verification (authors can only add chapters to their own novels).
-  - Integrated audit logging for chapter creation events.
+### 5. Start Development Server
+```bash
+npm run dev
+```
+Visit [http://localhost:3000](http://localhost:3000) to start.
 
-- **Request Logging System**:
-  - Implemented a daily file-based logging system in `/logs`.
-  - Logs include Timestamp, Method, URL, IP, and User-Agent.
-  - **Architecture**:
-    - Middleware captures request details.
-    - Asynchronously sends data to internal `/api/log` endpoint.
-    - `src/lib/logger.ts` handles physical file writing (e.g., `logs/2026-01-13.log`).
+## 📝 Latest Updates (2026-01-15)
 
-## Learn More
+### New Features
+- **CTF Module**: Launched with terminal simulator, leaderboards, and various security challenges.
+- **AI Pre-review**: Chapter submissions now undergo preliminary quality assessment via `ai-pre-review`.
+- **Advanced User Management**: Super Admins can now manage roles, passwords, and account status directly from the dashboard.
+- **Enhanced Logging**: Implemented file-based daily request logging for better observability.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Improvements & Fixes
+- Upgraded to **Next.js 16** and **React 19**.
+- Fixed issues with login redirects, author permissions, and footer layout.
+- Optimized database models with full support for AI review status.

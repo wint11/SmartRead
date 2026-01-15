@@ -41,6 +41,10 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
   const [hasMore, setHasMore] = React.useState(true)
   const [activeChapterId, setActiveChapterId] = React.useState(chapter.id)
   
+  // Ghost Mode State
+  const [isGhostMode, setIsGhostMode] = React.useState(false)
+  const [ghostTriggerCount, setGhostTriggerCount] = React.useState(0)
+  
   // Refs for scrolling and sync
   const contentScrollRef = React.useRef<HTMLDivElement | null>(null)
   const chapterNavRef = React.useRef<HTMLDivElement | null>(null)
@@ -395,8 +399,33 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
     return <div className="min-h-screen bg-background" />
   }
 
+  const handleTitleClick = () => {
+    setGhostTriggerCount(prev => {
+      const newCount = prev + 1
+      if (newCount === 5) {
+        setIsGhostMode(true)
+        // Reset after some time or keep it? Let's keep it toggleable by another 5 clicks?
+        // Actually, let's make it toggle.
+        return 0
+      }
+      return newCount
+    })
+  }
+  
+  // If already in ghost mode, 5 clicks to turn off
+  const handleGhostToggle = () => {
+    setGhostTriggerCount(prev => {
+       const newCount = prev + 1
+       if (newCount >= 5) {
+         setIsGhostMode(!isGhostMode)
+         return 0
+       }
+       return newCount
+    })
+  }
+
   return (
-    <div className={cn("h-[calc(100vh-64px)] overflow-hidden relative select-none", currentTheme.bg)}>
+    <div className={cn("h-[calc(100vh-64px)] overflow-hidden relative select-none", currentTheme.bg, isGhostMode && "ghost-mode-active")}>
       <div className="relative w-full h-full flex justify-center">
         {/* Chapter Tree Sidebar - Anchored to Center */}
         <div 
@@ -499,12 +528,21 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
                   >
                     <h1
                       className={cn(
-                        "mb-12 text-center text-3xl font-bold tracking-tight md:text-4xl",
-                        currentTheme.text
+                        "mb-2 text-center text-3xl font-bold tracking-tight md:text-4xl select-none cursor-text",
+                        currentTheme.text,
+                        isGhostMode && "glitch-text"
                       )}
+                      onClick={handleGhostToggle}
+                      data-text={c.title}
                     >
                       {c.title}
                     </h1>
+                    
+                    <div className="h-10 flex items-center justify-center mb-10">
+                         <span className={cn("ghost-text-hidden text-sm")}>
+                            flag&#123;y0u_h4v3_th3_3y3s_0f_7ru7h&#125;
+                         </span>
+                    </div>
                     
                     <div
                       className={cn(

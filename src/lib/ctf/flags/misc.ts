@@ -11,6 +11,7 @@ export const MISC_FLAGS = {
   50: "flag{have_you_tried_turning_it_off_and_on_again}", // reboot
   51: "flag{zip_files_are_fun_9988}", // Unzip
   99: "flag{snake_charmer_master_8822}", // Snake Game
+  100: "flag{y0u_h4v3_th3_3y3s_0f_7ru7h}", // Ghost Mode
 } as const
 
 export const MISC_HINTS = {
@@ -26,4 +27,5 @@ export const MISC_HINTS = {
   50: "Classic IT support fix.",
   51: "Extract the backup archive.",
   99: "Launch the snake protocol.",
+  100: "See the unseen in the reader.",
 } as const

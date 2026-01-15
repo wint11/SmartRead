@@ -260,6 +260,72 @@ Welcome to the SmartRead CTF Challenge! This guide provides step-by-step instruc
     - **Sudo Fail**: Fail sudo 3 times -> `flag{sudo_incident_reported_santa_claus}`
     - **Reboot**: `reboot` -> `flag{have_you_tried_turning_it_off_and_on_again}`
     - **Unzip**: `unzip backup.zip` -> `flag{zip_files_are_fun_9988}`
+    - **Snake Game**: `snake` -> Win the game -> `flag{snake_charmer_master_8822}`
+    - **Ghost Mode**: 
+        - Go to any novel reading page (e.g., `/novel/1/chapter/1`).
+        - Click the **Chapter Title** 5 times repeatedly.
+        - Observe the visual glitch and the hidden flag below the title.
+        - Flag: `flag{y0u_h4v3_th3_3y3s_0f_7ru7h}`
+
+---
+
+## 🛠 Developer Guide: How to Add a New Flag
+
+Want to contribute a new challenge? Follow this 3-step process:
+
+### Step 1: Register the Flag
+Edit `src/lib/ctf/flags/misc.ts` (or other category file like `web.ts`, `system.ts`):
+```typescript
+export const MISC_FLAGS = {
+  // ... existing flags
+  101: "flag{your_new_unique_flag_here}", // Add your flag with a unique ID
+} as const
+
+export const MISC_HINTS = {
+  // ... existing hints
+  101: "A helpful hint for the user.",
+} as const
+```
+
+### Step 2: Define the Challenge
+Edit `src/app/ctf/data/challenges.ts` to add the task card:
+```typescript
+export const STANDARD_TASKS: Challenge[] = [
+    // ...
+    { 
+        id: 101, 
+        title: "Your Challenge Title", 
+        description: "Description of what the user needs to do.", 
+        hint: "Short hint displayed on the card.", 
+        points: 50, 
+        category: 'misc' // 'web' | 'system' | 'crypto' | 'misc' | 'deep'
+    },
+];
+```
+
+### Step 3: Implement the Logic
+Depending on the type of challenge, implement the trigger logic:
+
+*   **Terminal Command**: Edit `src/app/ctf/commands/` (e.g., `misc.ts` or create new).
+    ```typescript
+    if (args[0] === 'your_secret_command') {
+        addToHistory('output', "flag{your_new_unique_flag_here}");
+    }
+    ```
+*   **Web Interaction**: Edit the React component (e.g., `ctf-client.tsx` or `reader-view.tsx`).
+    ```tsx
+    // Example: Click handler
+    const handleClick = () => {
+        console.log("flag{your_new_unique_flag_here}");
+    }
+    ```
+
+**Verification**:
+1. Run the app.
+2. Trigger your challenge.
+3. Copy the flag.
+4. Run `submit <flag>` in the CTF terminal.
+5. Ensure you receive `[SUCCESS]` and points are awarded.
 
 ---
 **Good Luck, Hacker!**
