@@ -25,12 +25,12 @@ export function useBombMechanic() {
         if (savedBomb) {
             try {
                 const parsed = JSON.parse(savedBomb)
-                if (parsed.exploded) {
-                    setBombState(parsed)
-                } else if (parsed.active && parsed.timeLeft > 0) {
-                    setBombState(parsed)
-                }
-            } catch (e) {
+            if (parsed.exploded) {
+                setTimeout(() => setBombState(parsed), 0)
+            } else if (parsed.active && parsed.timeLeft > 0) {
+                setTimeout(() => setBombState(parsed), 0)
+            }
+        } catch (e) {
                 console.error("Failed to parse bomb state", e)
             }
         }

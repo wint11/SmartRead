@@ -267,6 +267,11 @@ Welcome to the SmartRead CTF Challenge! This guide provides step-by-step instruc
         - Observe the visual glitch and the hidden flag below the title.
         - Flag: `flag{y0u_h4v3_th3_3y3s_0f_7ru7h}`
 
+52. **Time Rift (Hidden Game)**
+    - **Access**: Find the glitchy "[TIME_RIFT_DETECTED]" link in the Reader View.
+    - **Goal**: Collect 5 fragments via minigames and escape.
+    - Flag: `flag{run_lola_run_404}`
+
 ---
 
 ## 🛠 Developer Guide: How to Add a New Flag

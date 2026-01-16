@@ -95,6 +95,19 @@ export function GlitchEffect({ active, onEnd }: { active: boolean; onEnd: () => 
     }
   }, [active, onEnd])
 
+  const [glitchLines, setGlitchLines] = useState<{top: number, left: number, opacity: number, scaleX: number}[]>([])
+  
+  useEffect(() => {
+    if (active) {
+        setGlitchLines(Array.from({ length: 10 }).map(() => ({
+            top: Math.random() * 100,
+            left: Math.random() * 10 - 5,
+            opacity: Math.random(),
+            scaleX: Math.random()
+        })))
+    }
+  }, [active])
+
   if (!active) return null
 
   return (
@@ -106,15 +119,15 @@ export function GlitchEffect({ active, onEnd }: { active: boolean; onEnd: () => 
         <span className="text-xl mt-4">0xDEADBEEF</span>
       </div>
       {/* Random glitch lines */}
-      {Array.from({ length: 10 }).map((_, i) => (
+      {glitchLines.map((line, i) => (
         <div 
           key={i}
           className="absolute h-1 bg-white/50 w-full"
           style={{ 
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 10 - 5}%`,
-            opacity: Math.random(),
-            transform: `scaleX(${Math.random()})`
+            top: `${line.top}%`,
+            left: `${line.left}%`,
+            opacity: line.opacity,
+            transform: `scaleX(${line.scaleX})`
           }}
         />
       ))}

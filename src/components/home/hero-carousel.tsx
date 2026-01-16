@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowRight, BookOpen, Flame } from "lucide-react"
+import { BookOpen, Flame } from "lucide-react"
 import Autoplay from "embla-carousel-autoplay"
 
 import { Button } from "@/components/ui/button"

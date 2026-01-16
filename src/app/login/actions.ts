@@ -3,6 +3,7 @@
 import { signIn } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { AuthError } from "next-auth"
+import bcrypt from "bcryptjs"
 
 export async function login(formData: FormData) {
   try {
@@ -91,7 +92,6 @@ export async function register(formData: FormData) {
       return { success: false, error: "该邮箱已被注册" }
     }
 
-    const bcrypt = require("bcryptjs")
     const hashedPassword = await bcrypt.hash(password, 10)
 
     await prisma.user.create({

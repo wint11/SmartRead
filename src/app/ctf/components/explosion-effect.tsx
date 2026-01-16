@@ -92,47 +92,51 @@ export function ExplosionEffect({ initialStage = 'explode' }: { initialStage?: '
   }
 
   // Explosion Stage
-  const particles = Array.from({ length: 100 }).map((_, i) => {
-    const angle = Math.random() * 360
-    const distance = 200 + Math.random() * 1000 
-    const size = 5 + Math.random() * 40
-    const delay = Math.random() * 0.2
-    const duration = 0.5 + Math.random() * 0.5
-    const color = Math.random() > 0.3 ? '#ef4444' : '#fb923c' // Mostly Red, some Orange
+  const particles = React.useMemo(() => Array.from({ length: 100 }).map((_, i) => {
+    const seed = i
+    const rand1 = Math.abs(Math.sin(seed * 12.9898) * 43758.5453) % 1
+    const rand2 = Math.abs(Math.sin(seed * 78.233) * 43758.5453) % 1
+    const rand3 = Math.abs(Math.sin(seed * 45.123) * 43758.5453) % 1
+    const rand4 = Math.abs(Math.sin(seed * 99.999) * 43758.5453) % 1
+    const rand5 = Math.abs(Math.sin(seed * 11.111) * 43758.5453) % 1
 
-    return (
-      <div
-        key={i}
-        className="absolute rounded-full animate-explosion-particle"
-        style={{
-          left: '50%',
-          top: '50%',
-          width: `${size}px`,
-          height: `${size}px`,
-          backgroundColor: color,
-          '--angle': `${angle}deg`,
-          '--dist': `${distance}px`,
-          animationDelay: `${delay}s`,
-          animationDuration: `${duration}s`,
-          boxShadow: `0 0 ${size * 4}px ${color}` // Larger glow
-        } as React.CSSProperties}
-      />
-    )
-  })
+    const angle = rand1 * 360
+    const distance = 200 + rand2 * 1000 
+    const size = 5 + rand3 * 40
+    const delay = rand4 * 0.2
+    const duration = 0.5 + rand5 * 0.5
+    const color = rand1 > 0.3 ? '#ef4444' : '#fb923c' // Mostly Red, some Orange
 
-  return renderPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden pointer-events-none bg-black">
-      {/* Intense White Flash */}
-      <div className="absolute inset-0 bg-white animate-explosion-flash" />
-      
-      {/* Multiple Shockwaves */}
-      <div className="absolute inset-0 border-[300px] border-orange-500 rounded-full animate-explosion-shockwave opacity-0" />
-      <div className="absolute inset-0 border-[200px] border-red-600 rounded-full animate-explosion-shockwave opacity-0" style={{ animationDelay: '0.1s' }} />
-      
-      {/* Particles */}
-      <div className="relative w-full h-full">
-         {particles}
-      </div>
-    </div>
+    return {
+      id: i,
+      style: {
+        left: '50%',
+        top: '50%',
+        width: `${size}px`,
+        height: `${size}px`,
+        backgroundColor: color,
+        '--angle': `${angle}deg`,
+        '--dist': `${distance}px`,
+        animationDelay: `${delay}s`,
+        animationDuration: `${duration}s`,
+        boxShadow: `0 0 ${size * 4}px ${color}` // Larger glow
+      } as React.CSSProperties
+    }
+  }), [])
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] pointer-events-none overflow-hidden flex items-center justify-center">
+       {/* Shockwave */}
+       <div className="absolute inset-0 bg-white animate-explosion-shockwave" />
+       
+       {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute rounded-full animate-explosion-particle"
+          style={p.style}
+        />
+      ))}
+    </div>,
+    document.body
   )
 }

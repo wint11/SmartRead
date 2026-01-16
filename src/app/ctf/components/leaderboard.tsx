@@ -44,12 +44,12 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
   const [isSkillTreeOpen, setIsSkillTreeOpen] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    setTimeout(() => setMounted(true), 0)
   }, [])
 
   useEffect(() => {
     if (isOpen) {
-      setLoading(true)
+      setTimeout(() => setLoading(true), 0)
       getLeaderboard(solvedCount)
         .then(res => setData(res))
         .finally(() => setLoading(false))
@@ -94,7 +94,7 @@ export function Leaderboard({ solvedCount, hidden = false, solvedFlags }: Leader
 
   const handlePressEnd = () => {
     if (timerRef.current) {
-      clearTimeout(timerRef.current as any)
+      clearTimeout(timerRef.current as NodeJS.Timeout)
       timerRef.current = null
     }
   }

@@ -11,7 +11,7 @@ export function useShatterMechanic(
     // Handle Shatter Trigger
     useEffect(() => {
         if (commandNotFoundCount >= 5 && visualState === 'normal') {
-            setVisualState('system_failure')
+            setTimeout(() => setVisualState('system_failure'), 0)
             
             // Step 1: Show System Failure message for 2 seconds
             setTimeout(() => {

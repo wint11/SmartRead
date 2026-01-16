@@ -20,10 +20,14 @@ export function TerminalShatter({ children }: { children: React.ReactNode }) {
             // Apply jitter to internal vertices
             // Don't jitter boundaries to ensure full coverage
             if (r > 0 && r < rows && c > 0 && c < cols) {
+                const seed = r * cols + c
+                const randX = Math.abs(Math.sin(seed * 12.9898) * 43758.5453) % 1
+                const randY = Math.abs(Math.sin(seed * 78.233) * 43758.5453) % 1
+                
                 const jitterRangeX = (100 / cols) * 0.4 // 40% of cell width jitter
                 const jitterRangeY = (100 / rows) * 0.4
-                x += (Math.random() - 0.5) * jitterRangeX
-                y += (Math.random() - 0.5) * jitterRangeY
+                x += (randX - 0.5) * jitterRangeX
+                y += (randY - 0.5) * jitterRangeY
             }
             rowVertices.push({ x, y })
         }
@@ -63,10 +67,16 @@ export function TerminalShatter({ children }: { children: React.ReactNode }) {
             const clipPath = `polygon(${lp1.x}% ${lp1.y}%, ${lp2.x}% ${lp2.y}%, ${lp3.x}% ${lp3.y}%, ${lp4.x}% ${lp4.y}%)`
 
             // Animation props
-            const randomRotate = (Math.random() - 0.5) * 120 
-            const randomTx = (Math.random() - 0.5) * 300
-            const delay = Math.random() * 0.2
-            const duration = 1.5 + Math.random() * 0.5
+            const seed = r * cols + c
+            const rand1 = Math.abs(Math.sin(seed * 1.1) * 1000) % 1
+            const rand2 = Math.abs(Math.sin(seed * 2.2) * 2000) % 1
+            const rand3 = Math.abs(Math.sin(seed * 3.3) * 3000) % 1
+            const rand4 = Math.abs(Math.sin(seed * 4.4) * 4000) % 1
+
+            const randomRotate = (rand1 - 0.5) * 120 
+            const randomTx = (rand2 - 0.5) * 300
+            const delay = rand3 * 0.2
+            const duration = 1.5 + rand4 * 0.5
 
             newShards.push({
                 id: r * cols + c,

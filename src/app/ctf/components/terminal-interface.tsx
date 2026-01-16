@@ -35,7 +35,7 @@ export function TerminalInterface({
     if (inputRef.current && !isSnapshot) {
         // When input value changes programmatically (e.g. history), React usually moves cursor to end.
         // We sync our visual cursor to match.
-        setCursorPos(inputRef.current.selectionStart || 0)
+        setTimeout(() => setCursorPos(inputRef.current?.selectionStart || 0), 0)
     }
   }, [input, isSnapshot])
   

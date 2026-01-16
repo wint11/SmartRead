@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BookOpen, User, PenTool, LayoutDashboard, LogOut, Plus, Users } from "lucide-react"
+import { BookOpen, User, PenTool, LayoutDashboard, LogOut, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Suspense } from "react"

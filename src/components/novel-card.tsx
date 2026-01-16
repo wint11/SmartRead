@@ -37,7 +37,7 @@ export function NovelCard({ novel, isGlitchTarget = false }: NovelCardProps) {
     <Link 
       href={glitch ? "/ctf" : `/novel/${novel.id}`} 
       className="group block h-full relative"
-      onClick={(e) => {
+      onClick={() => {
         if (glitch) {
           // Allow default navigation to /ctf
         } else {

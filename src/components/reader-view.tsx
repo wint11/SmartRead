@@ -43,7 +43,7 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
   
   // Ghost Mode State
   const [isGhostMode, setIsGhostMode] = React.useState(false)
-  const [ghostTriggerCount, setGhostTriggerCount] = React.useState(0)
+  const [, setGhostTriggerCount] = React.useState(0)
   const [showTimeRift, setShowTimeRift] = React.useState(false)
 
   // Time detection for Time Traveler
@@ -133,14 +133,6 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
   }, [])
 
   const currentTheme = THEMES.find(t => t.name === theme) || THEMES[0]
-  const loadedChapterIds = React.useMemo(
-    () => new Set(loadedChapters.map((c) => c.id)),
-    [loadedChapters]
-  )
-
-  const activeOrder = React.useMemo(() => {
-    return chapters.find(c => c.id === activeChapterId)?.order ?? -1
-  }, [chapters, activeChapterId])
 
   // --- Synchronization Logic ---
 
@@ -288,7 +280,7 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
     
     // Initial scroll to top
     contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" })
-  }, [chapter.id, chapter.novel.id]) // minimal deps
+  }, [chapter.id, chapter.novel.id, chapter.title, chapter.content, chapter.order]) // minimal deps
 
   // Update refs when loadedChapters change
   React.useEffect(() => {
@@ -423,19 +415,6 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
 
   if (!mounted) {
     return <div className="min-h-screen bg-background" />
-  }
-
-  const handleTitleClick = () => {
-    setGhostTriggerCount(prev => {
-      const newCount = prev + 1
-      if (newCount === 5) {
-        setIsGhostMode(true)
-        // Reset after some time or keep it? Let's keep it toggleable by another 5 clicks?
-        // Actually, let's make it toggle.
-        return 0
-      }
-      return newCount
-    })
   }
   
   // If already in ghost mode, 5 clicks to turn off
@@ -576,7 +555,7 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
               <div ref={loadPrevRef} className="h-1 w-full" />
               
               <article className="prose prose-lg mx-auto max-w-none dark:prose-invert select-text">
-                {loadedChapters.map((c, idx) => (
+                {loadedChapters.map((c) => (
                   <div 
                     key={c.id} 
                     className="mb-20 scroll-mt-24"

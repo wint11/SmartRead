@@ -65,8 +65,8 @@ export const STANDARD_TASKS: Challenge[] = [
     { id: 60, title: "Strings Attached", description: "Analyze the 'firmware.bin' file for readable strings.", hint: "Use the strings command on the binary.", points: 30, category: 'system' },
     { id: 99, title: "Snake Charmer", description: "Find the secret snake game and eat the special fruit.", hint: "Launch the snake protocol.", points: 50, category: 'misc' },
     { id: 100, title: "Ghost Mode", description: "Find the hidden 'Ghost Mode' in the novel reader.", hint: "See the unseen in the reader.", points: 50, category: 'misc' },
-    { id: 102, title: "Time Traveler", description: "Find the hidden timeline in the reader.", hint: "Visit the past at the right moment.", points: 50, category: 'misc' },
     { id: 103, title: "The Infinite Story", description: "Contribute to the never-ending story.", hint: "Find the book that writes itself.", points: 50, category: 'misc' },
+    { id: 120, title: "Time Rift", description: "Stabilize the corrupted timeline and escape with the data.", hint: "Escape the collapsing timeline.", points: 50, category: 'misc' },
 ];
 
 export const ROOT_TASKS: Challenge[] = [

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { OSBootScreen } from "./os-boot-screen"
 import { OSWindow } from "./os-window"
@@ -68,7 +68,7 @@ export function OSDesktop() {
     setNextZIndex(prev => prev + 1)
   }
 
-  const launchApp = (appId: string, file?: FileSystemNode) => {
+  const launchApp = useCallback((appId: string, file?: FileSystemNode) => {
     // Unique ID for the window. 
     // If it's a singleton app (like minesweeper maybe?), we might want to check if open.
     // For now, allow multiple instances unless it's the same file.
@@ -98,11 +98,14 @@ export function OSDesktop() {
       width: appConfig.defaultWidth || 600,
       height: appConfig.defaultHeight || 400
     }
-
+    
     setWindows(prev => [...prev, newWindow])
-    setActiveWindowId(windowId)
     setNextZIndex(prev => prev + 1)
-  }
+    setActiveWindowId(windowId)
+    
+    // Close start menu
+    setIsStartMenuOpen(false)
+  }, [windows, nextZIndex])
 
   const handleFileOpen = (node: FileSystemNode) => {
     if (node.type === 'folder') {

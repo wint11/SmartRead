@@ -64,7 +64,7 @@ export function MinesweeperApp({ }: AppProps) {
   }
 
   useEffect(() => {
-    initializeBoard()
+    setTimeout(initializeBoard, 0)
   }, [])
 
   const revealCell = (x: number, y: number) => {

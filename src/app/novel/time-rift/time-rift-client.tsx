@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { cn } from "@/lib/utils"
+import { MinigameContainer, MinigameResult } from "./minigames"
 
 // --- Types & Constants ---
 type Point = { x: number; y: number }
-type GamePhase = 'EXPLORE' | 'ESCAPE' | 'WON' | 'GAME_OVER'
+type GamePhase = 'EXPLORE' | 'ESCAPE' | 'WON' | 'GAME_OVER' | 'HACKING'
 type EntityType = 'PLAYER' | 'ENEMY' | 'NPC' | 'ITEM'
 
 const CELL_SIZE = 40 
@@ -17,37 +18,32 @@ const EXIT_POS: Point = { x: 55, y: 55 }
 
 // RPG Data
 const ITEMS = {
-  KEY_ALPHA: { id: 'key_alpha', name: 'Alpha Key', desc: 'Old rusty key.' },
-  KEY_OMEGA: { id: 'key_omega', name: 'Omega Key', desc: 'Glowing digital key.' },
   DATA_FRAG: { id: 'data_frag', name: 'Memory Fragment', desc: 'Corrupted data.' }
 }
 
 const NPCS = [
   { 
     id: 'guide', 
-    x: 5, y: 5, 
-    name: 'The Glitch', 
-    dialogue: ["You shouldn't be here.", "The timeline is collapsing.", "Find the keys to stabilize the sector."],
+    x: 30, y: 30, 
+    name: 'The Uploader', 
+    dialogue: {
+        intro: ["I need 5 Data Fragments to open the gateway.", "The timeline is unstable.", "Collect them all."],
+        completed: ["Data uplink established.", "EXIT PROTOCOL: ACTIVATED.", "RUN!"],
+        hasItem: ["Fragment processed...", "Need more data."]
+    },
     reqItem: null,
     reward: null
-  },
-  { 
-    id: 'keeper', 
-    x: 30, y: 30, 
-    name: 'Time Keeper', 
-    dialogue: ["I need the Alpha Key.", "It was lost in the shifting sands."],
-    reqItem: 'key_alpha',
-    reward: 'key_omega'
   }
 ]
 
 // Items config
-const TOTAL_FRAGMENTS = 3
+const TOTAL_FRAGMENTS = 5
 const FRAGMENT_LOCATIONS = [
-  { x: 15, y: 15, id: 'frag_1' },
-  { x: 50, y: 10, id: 'frag_2' },
-  { x: 10, y: 50, id: 'frag_3' },
-  { x: 45, y: 45, id: 'key_alpha_loc', itemId: 'key_alpha' } // Item on map
+  { x: 10, y: 10, id: 'frag_1' }, // Snake
+  { x: 50, y: 10, id: 'frag_2' }, // Sliding
+  { x: 10, y: 50, id: 'frag_3' }, // Memory
+  { x: 50, y: 50, id: 'frag_4' }, // Simon
+  { x: 30, y: 10, id: 'frag_5' }, // Timing
 ]
 
 // Dynamic Terrain Config
@@ -57,6 +53,7 @@ const WARNING_DURATION = 1000
 export function TimeRiftClient() {
   // --- State ---
   const [playerPos, setPlayerPos] = useState<Point>(START_POS)
+  const [prevPos, setPrevPos] = useState<Point>(START_POS) // For rollback
   const [gamePhase, setGamePhase] = useState<GamePhase>('EXPLORE')
   const [collectedFrags, setCollectedFrags] = useState<string[]>([])
   const [enemies, setEnemies] = useState<Point[]>([])
@@ -71,6 +68,9 @@ export function TimeRiftClient() {
   const [backdoorHidden, setBackdoorHidden] = useState(false)
   const [inventory, setInventory] = useState<string[]>([])
   const [dialogue, setDialogue] = useState<{show: boolean, text: string, npcId?: string} | null>(null)
+  
+  // Minigame State
+  const [pendingItem, setPendingItem] = useState<string | null>(null)
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -87,13 +87,10 @@ export function TimeRiftClient() {
     const points = [
       START_POS, 
       { x: NPCS[0].x, y: NPCS[0].y }, 
-      FRAGMENT_LOCATIONS[0], 
-      FRAGMENT_LOCATIONS[1], 
-      { x: NPCS[1].x, y: NPCS[1].y },
-      FRAGMENT_LOCATIONS[2], 
-      FRAGMENT_LOCATIONS[3], // Key location
+      ...FRAGMENT_LOCATIONS,
       EXIT_POS
     ]
+
     const CORRIDOR_WIDTH = 1 
 
     for (let i = 0; i < points.length - 1; i++) {
@@ -154,7 +151,7 @@ export function TimeRiftClient() {
 
   // --- Enemy AI (The "Time Eaters") ---
   useEffect(() => {
-    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER' || showTutorial) return
+    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER' || gamePhase === 'HACKING' || showTutorial) return
 
     // Spawn enemies if none exist
     if (enemies.length === 0) {
@@ -170,18 +167,20 @@ export function TimeRiftClient() {
         if (dist < 15) continue
 
         // 2. Wall Check (Don't spawn in walls)
-        // Note: We check against phase 0, but enemies can move through dynamic walls anyway
-        // We mainly want to avoid Static Walls (Type 1)
         if (getCellType(ex, ey, 0) === 1) continue
 
         newEnemies.push({ x: ex, y: ey })
       }
-      // Fallback if random gen fails (should be rare)
+      // Fallback
       if (newEnemies.length === 0) {
          newEnemies.push({ x: 40, y: 40 }, { x: 40, y: 10 }, { x: 10, y: 40 })
       }
-      setEnemies(newEnemies)
+      setTimeout(() => setEnemies(newEnemies), 0)
     }
+  }, [gamePhase, showTutorial, enemies.length, playerPos, getCellType])
+
+  useEffect(() => {
+    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER' || gamePhase === 'HACKING' || showTutorial) return
 
     const moveInterval = setInterval(() => {
       setEnemies(prevEnemies => {
@@ -220,20 +219,21 @@ export function TimeRiftClient() {
 
           // Collision with player
           if (nextX === playerPos.x && nextY === playerPos.y) {
-            setGamePhase('GAME_OVER')
+            // Handle collision in the collision effect, but we can also set it here if we want immediate feedback
+            // But let's leave it to the collision effect to avoid duplicate state updates or sync issues
           }
 
           return { x: nextX, y: nextY }
         })
       })
-    }, 800) // Move every 800ms
+    }, gamePhase === 'ESCAPE' ? 250 : 400) // FASTER in ESCAPE mode
 
     return () => clearInterval(moveInterval)
   }, [playerPos, gamePhase, timePhase, showTutorial, getCellType])
 
   // --- Game Loop (Time & Collapse) ---
   useEffect(() => {
-    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER') return
+    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER' || gamePhase === 'HACKING') return
 
     const timer = setInterval(() => {
       const now = Date.now()
@@ -260,18 +260,18 @@ export function TimeRiftClient() {
 
   // --- Player Collision & Logic ---
   useEffect(() => {
-    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER') return
+    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER' || gamePhase === 'HACKING') return
 
     // 1. Terrain Kill
     const cellType = getCellType(playerPos.x, playerPos.y, timePhase)
     if (cellType === 2) {
-      setGamePhase('GAME_OVER')
+      setTimeout(() => setGamePhase('GAME_OVER'), 0)
       return
     }
 
     // 2. Enemy Kill
     if (enemies.some(e => e.x === playerPos.x && e.y === playerPos.y)) {
-      setGamePhase('GAME_OVER')
+      setTimeout(() => setGamePhase('GAME_OVER'), 0)
       return
     }
 
@@ -280,23 +280,16 @@ export function TimeRiftClient() {
     
     // Handle Fragments (Game Progression)
     if (itemHere && itemHere.id.startsWith('frag_') && !collectedFrags.includes(itemHere.id)) {
-      const newCollection = [...collectedFrags, itemHere.id]
-      setCollectedFrags(newCollection)
-      
-      if (newCollection.length === TOTAL_FRAGMENTS) {
-        setGamePhase('ESCAPE')
-        setEscapeTimer(60) 
-      }
-    }
-
-    // Handle RPG Items (Inventory)
-    if (itemHere && itemHere.itemId && !inventory.includes(itemHere.itemId)) {
-      setInventory(prev => [...prev, itemHere.itemId!])
+      setTimeout(() => {
+        setGamePhase('HACKING')
+        setPendingItem(itemHere.id)
+      }, 0)
+      return
     }
 
     // 4. Win Condition
     if (gamePhase === 'ESCAPE' && cellType === 9) {
-      setGamePhase('WON')
+      setTimeout(() => setGamePhase('WON'), 0)
     }
 
   }, [playerPos, timePhase, gamePhase, collectedFrags, enemies, getCellType, inventory])
@@ -314,36 +307,47 @@ export function TimeRiftClient() {
     const npc = NPCS.find(n => neighbors.some(nb => nb.x === n.x && nb.y === n.y))
     
     if (npc) {
-      // Check quest logic
-      let text = npc.dialogue[Math.floor(Math.random() * npc.dialogue.length)]
-      
-      // Quest Completion Check
-      if (npc.reqItem && inventory.includes(npc.reqItem)) {
-        if (npc.reward && !inventory.includes(npc.reward)) {
-          setInventory(prev => [...prev, npc.reward!])
-          text = `Here, take this ${ITEMS[npc.reward as keyof typeof ITEMS]?.name || 'item'}. You earned it.`
-        } else if (npc.reward && inventory.includes(npc.reward)) {
-          text = "Good luck with the rest of your journey."
-        }
-      } else if (npc.reqItem) {
-        text = `I need the ${ITEMS[npc.reqItem as keyof typeof ITEMS]?.name}. Please find it.`
+      let textLines: string[] = npc.dialogue.intro || ["..."]
+      let text = ""
+
+      if (gamePhase === 'ESCAPE') {
+           textLines = ["RUN!", "The collapse is imminent!"]
+      } else if (collectedFrags.length === TOTAL_FRAGMENTS) {
+           // Complete
+           textLines = npc.dialogue.completed || ["Done."]
+           setGamePhase('ESCAPE')
+           setEscapeTimer(60)
+      } else if (collectedFrags.length > 0) {
+           // Progress
+           textLines = npc.dialogue.hasItem || ["More data."]
+           text = `I need ${TOTAL_FRAGMENTS - collectedFrags.length} more fragments.`
+      } else {
+           // Intro
+           textLines = npc.dialogue.intro
       }
 
+      if (!text) text = textLines[Math.floor(Math.random() * textLines.length)]
       setDialogue({ show: true, text, npcId: npc.id })
     }
-  }, [playerPos, inventory])
+  }, [playerPos, collectedFrags, gamePhase])
 
   // --- Movement ---
   const move = useCallback((dx: number, dy: number) => {
-    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER' || showTutorial) return
+    if (gamePhase === 'WON' || gamePhase === 'GAME_OVER' || gamePhase === 'HACKING' || showTutorial) return
     if (dialogue?.show) return // Lock movement during dialogue
 
     setPlayerPos(prev => {
       const nextX = prev.x + dx
       const nextY = prev.y + dy
+      
+      // Collision with NPC
+      if (NPCS.some(n => n.x === nextX && n.y === nextY)) return prev
+
       const cellType = getCellType(nextX, nextY, timePhase)
       
       if (cellType === 1 || cellType === 2) return prev
+      
+      setPrevPos(prev) // Save valid previous position
       return { x: nextX, y: nextY }
     })
   }, [gamePhase, timePhase, showTutorial, getCellType, dialogue])
@@ -394,6 +398,20 @@ export function TimeRiftClient() {
       setPlayerPos({ x: EXIT_POS.x - 1, y: EXIT_POS.y })
     }
     setShowTutorial(false)
+  }
+
+  const handleMinigameComplete = (result: MinigameResult) => {
+    if (result === 'SUCCESS' && pendingItem) {
+      // Add Item
+      const newCollection = [...collectedFrags, pendingItem]
+      setCollectedFrags(newCollection)
+      setGamePhase('EXPLORE')
+    } else {
+      // Failed or Cancelled - Rollback player
+      setPlayerPos(prevPos)
+      setGamePhase('EXPLORE')
+    }
+    setPendingItem(null)
   }
 
   return (
@@ -450,7 +468,7 @@ export function TimeRiftClient() {
         <div className="flex gap-2">
           {inventory.length === 0 && <div className="text-green-900 text-xs">EMPTY</div>}
           {inventory.map(itemId => (
-            <div key={itemId} className="w-8 h-8 border border-green-500 bg-green-900/20 flex items-center justify-center" title={ITEMS[itemId as keyof typeof ITEMS]?.name}>
+            <div key={itemId} className="w-8 h-8 border border-green-500 bg-green-900/20 flex items-center justify-center" title={Object.values(ITEMS).find(i => i.id === itemId)?.name || itemId}>
                <div className="w-4 h-4 bg-yellow-400 rounded-sm" />
             </div>
           ))}
@@ -483,7 +501,6 @@ export function TimeRiftClient() {
           {viewportCells.map((cell) => {
             const isPlayer = cell.dx === 0 && cell.dy === 0
             let bgClass = "bg-black"
-            let symbol = null
             
             if (cell.type === 1) bgClass = "bg-green-900/20 border border-green-900/30"
             if (cell.type === 2) bgClass = "bg-red-900/40 border border-red-500/50"
@@ -559,6 +576,13 @@ export function TimeRiftClient() {
          </div>
       )}
 
+      {/* --- Minigame Overlay --- */}
+      {gamePhase === 'HACKING' && (
+         <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-sm">
+             <MinigameContainer type={pendingItem || 'frag_1'} onComplete={handleMinigameComplete} />
+         </div>
+      )}
+
       {/* --- Overlays --- */}
       {(showTutorial || gamePhase === 'GAME_OVER' || gamePhase === 'WON') && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
@@ -569,8 +593,8 @@ export function TimeRiftClient() {
                 <h2 className="text-2xl font-bold text-green-400 tracking-widest mb-4">TEMPORAL PROTOCOL</h2>
                 <div className="text-sm text-green-300/80 space-y-3 text-left">
                   <p>1. <span className="text-cyan-400 font-bold">COLLECT</span>: Find 3 Data Fragments scattered in the maze.</p>
-                  <p>2. <span className="text-red-400 font-bold">AVOID</span>: "Time Eaters" (Red Orbs) hunt you. They can pass through time-walls.</p>
-                  <p>3. <span className="text-yellow-400 font-bold">ADAPT</span>: Terrain shifts every 3s. Don't get crushed.</p>
+                  <p>2. <span className="text-red-400 font-bold">AVOID</span>: &quot;Time Eaters&quot; (Red Orbs) hunt you. They can pass through time-walls.</p>
+                  <p>3. <span className="text-yellow-400 font-bold">ADAPT</span>: Terrain shifts every 3s. Don&apos;t get crushed.</p>
                   <p>4. <span className="text-white font-bold">ESCAPE</span>: Once data is secured, the timeline will collapse. Run to the exit.</p>
                 </div>
                 <button onClick={() => setShowTutorial(false)} className="w-full py-3 bg-green-900/50 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black font-bold uppercase mt-4">

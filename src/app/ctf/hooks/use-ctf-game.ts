@@ -1,12 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { verifyFlag, getFileContent } from "../actions"
-import { toast } from "sonner"
-import { INITIAL_FILE_SYSTEM, FileSystemNode, DirectoryNode, FileNode } from "../data/filesystem"
-import { BEGINNER_TASKS, STANDARD_TASKS, ROOT_TASKS, Challenge } from "../data/challenges"
+import { useState, useEffect, useCallback } from "react"
+import { INITIAL_FILE_SYSTEM, DirectoryNode } from "../data/filesystem"
+import { BEGINNER_TASKS } from "../data/challenges"
 import { executeCommand } from "../commands"
-import { CommandContext, normalizePath, findNode, hasPermission } from "../commands/types"
 import { useBombMechanic, BombState } from "../gameplay/bomb"
 import { useBootMechanic } from "../gameplay/boot"
 
@@ -46,25 +43,30 @@ export function useCtfGame() {
     if (isInitialized) return
     
     const saved = localStorage.getItem('ctf_solved')
-    if (saved) setSolvedFlags(JSON.parse(saved))
+    if (saved) setTimeout(() => setSolvedFlags(JSON.parse(saved)), 0)
     
     setIsInitialized(true)
-  }, [])
+  }, [isInitialized])
 
   // Bomb Timer Logic moved to useBombMechanic
+
+  const addToHistory = (type: 'input' | 'output', content: string) => {
+    setHistory(prev => [...prev, { type, content }])
+  }
 
   // Level Progression Guidance
   useEffect(() => {
       if (!isInitialized) return;
 
-      const beginnerDone = BEGINNER_TASKS.every(t => solvedFlags.includes(t.id));
       if (currentUser === 'root' && !history.some(h => h.content.includes('ROOT ACCESS GRANTED'))) {
-          addToHistory('output', '----------------------------------------');
-          addToHistory('output', '*** ROOT ACCESS GRANTED ***');
-          addToHistory('output', 'You have elevated privileges. Deep system layers exposed.');
-          addToHistory('output', 'New elite missions unlocked. Type "guide" to view.');
-          addToHistory('output', 'Flag: flag{deep_web_layer_root_access_granted_0011}');
-          addToHistory('output', '----------------------------------------');
+          setTimeout(() => {
+            addToHistory('output', '----------------------------------------');
+            addToHistory('output', '*** ROOT ACCESS GRANTED ***');
+            addToHistory('output', 'You have elevated privileges. Deep system layers exposed.');
+            addToHistory('output', 'New elite missions unlocked. Type "guide" to view.');
+            addToHistory('output', 'Flag: flag{deep_web_layer_root_access_granted_0011}');
+            addToHistory('output', '----------------------------------------');
+          }, 0)
       }
       
       // Check for Beginner Completion
@@ -72,18 +74,16 @@ export function useCtfGame() {
       const hasShownCompletion = history.some(h => h.content.includes('BEGINNER TRAINING COMPLETED'));
       
       if (isBeginnerComplete && !hasShownCompletion && currentUser !== 'root') {
-          addToHistory('output', '----------------------------------------');
-          addToHistory('output', '*** BEGINNER TRAINING COMPLETED ***');
-          addToHistory('output', 'You have mastered the basics. Standard security protocols are now active.');
-          addToHistory('output', 'New challenges unlocked. Type "guide" to continue.');
-          addToHistory('output', '----------------------------------------');
+          setTimeout(() => {
+            addToHistory('output', '----------------------------------------');
+            addToHistory('output', '*** BEGINNER TRAINING COMPLETED ***');
+            addToHistory('output', 'You have mastered the basics. Standard security protocols are now active.');
+            addToHistory('output', 'New challenges unlocked. Type "guide" to continue.');
+            addToHistory('output', '----------------------------------------');
+          }, 0)
       }
 
-  }, [currentUser, solvedFlags, history])
-
-  const addToHistory = (type: 'input' | 'output', content: string) => {
-    setHistory(prev => [...prev, { type, content }])
-  }
+  }, [currentUser, solvedFlags, history, isInitialized])
 
   // Boot Mechanic
   const handleBootComplete = useCallback(() => {

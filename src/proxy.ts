@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 import type { NextRequest, NextFetchEvent } from 'next/server'
 
 // Simple in-memory rate limiter (not suitable for distributed/serverless, good for demo)
-const rateLimit = new Map<string, { count: number; lastReset: number }>();
-const WINDOW_SIZE = 60 * 1000; // 1 minute
-const MAX_REQUESTS = 100; // 100 requests per minute
+// const rateLimit = new Map<string, { count: number; lastReset: number }>();
+// const WINDOW_SIZE = 60 * 1000; // 1 minute
+// const MAX_REQUESTS = 100; // 100 requests per minute
 
 export function proxy(request: NextRequest, event: NextFetchEvent) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown';
