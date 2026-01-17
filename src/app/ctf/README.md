@@ -272,6 +272,24 @@ Welcome to the SmartRead CTF Challenge! This guide provides step-by-step instruc
     - **Goal**: Collect 5 fragments via minigames and escape.
     - Flag: `flag{run_lola_run_404}`
 
+53. **Paywall Illusion (Lord of the Mysteries)**
+    - **Access**: Go to `/novel/cmkccv5w2000r102bpmjww5wu` (Lord of the Mysteries).
+    - **Goal**: Read the VIP Chapter 2 ("Divination").
+    - **Method**: The content is actually loaded but hidden by a CSS blur effect. Use DevTools to remove the `.paywall-blur` class or delete the overlay.
+    - Flag: `flag{paywalls_are_just_css_illusions_7733}`
+
+54. **I am a Billionaire (Wallet Manipulation)**
+    - **Access**: Go to Profile -> Wallet (`/profile`).
+    - **Goal**: Purchase the "Fool's Membership" which costs 1,000,000 coins.
+    - **Method**: 
+      1. Inspect your Cookies (Application tab -> Cookies).
+      2. Find `shop_session`.
+      3. It's a base64 encoded JSON + signature. Decode it: `{"balance":10,"role":"guest","userId":1001}`.
+      4. Modify the balance to `1000000`.
+      5. The signature verification is weak (allows `none` alg or brute-forceable secret).
+      6. Re-encode and update the cookie.
+    - Flag: `flag{money_makes_the_world_go_round_8888}`
+
 ---
 
 ## 🛠 Developer Guide: How to Add a New Flag

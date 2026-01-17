@@ -58,6 +58,15 @@ export default function NewChapterPage({ params }: { params: Promise<{ id: strin
                  <p className="text-sm text-red-500">{state.error.content[0]}</p>
                )}
              </div>
+             <div className="flex items-center space-x-2">
+               <input
+                 type="checkbox"
+                 id="isVip"
+                 name="isVip"
+                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+               />
+               <Label htmlFor="isVip">设置为 VIP 章节</Label>
+             </div>
              {state.error && typeof state.error === 'string' && (
                <p className="text-sm text-red-500">{state.error}</p>
              )}

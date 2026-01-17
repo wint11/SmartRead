@@ -81,6 +81,8 @@ model Chapter {
   novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
   status    String   @default("DRAFT") // DRAFT, PENDING, PUBLISHED, REJECTED
   
+  isVip     Boolean  @default(false)
+
   isModified Boolean @default(false) // Track if modified since last submission
 
   createdAt DateTime @default(now())

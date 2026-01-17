@@ -12,6 +12,7 @@ const chapterSchema = z.object({
   title: z.string().min(1, "标题不能为空").max(100, "标题过长"),
   content: z.string().min(100, "正文至少100个字"),
   novelId: z.string().min(1, "作品ID不能为空"),
+  isVip: z.boolean().optional(),
 })
 
 export type ChapterFormState = {
@@ -32,6 +33,7 @@ export async function createChapter(prevState: ChapterFormState, formData: FormD
     title: formData.get('title'),
     content: formData.get('content'),
     novelId: formData.get('novelId'),
+    isVip: formData.get('isVip') === 'on',
   }
 
   const validatedFields = chapterSchema.safeParse(rawData)
@@ -40,7 +42,7 @@ export async function createChapter(prevState: ChapterFormState, formData: FormD
     return { error: validatedFields.error.flatten().fieldErrors }
   }
 
-  const { title, content, novelId } = validatedFields.data
+  const { title, content, novelId, isVip } = validatedFields.data
 
   try {
     // Verify ownership
@@ -65,6 +67,7 @@ export async function createChapter(prevState: ChapterFormState, formData: FormD
         content,
         novelId,
         order,
+        isVip,
       }
     })
 

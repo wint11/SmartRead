@@ -1,81 +1,156 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
+import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { LogOut } from "lucide-react"
+import { LogOut, Wallet, Diamond, User, Settings, Shield } from "lucide-react"
 import { ReaderSettingsCard } from "@/app/profile/reader-settings"
+import { WalletCard } from "@/app/profile/wallet-card"
+import { getShopSession, initShopSession } from "./actions"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ProfileForm } from "./profile-form"
+import { PasswordForm } from "./password-form"
 
 export default async function ProfilePage() {
   const session = await auth()
   if (!session?.user) redirect("/login")
 
+  // Verify user exists in DB (handle stale sessions after DB reset)
+  const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id }
+  })
+  if (!dbUser) {
+      redirect("/api/auth/signout")
+  }
+
   const role = session.user.role ?? ""
+  
+  // CTF: Get shop session for Wallet
+  let shopSession = await getShopSession()
+  if (shopSession.isNew) {
+      // If new (missing cookie), we trigger init
+      // Note: In Server Components we can't easily set cookie. 
+      // The WalletCard client component will handle the init call if needed.
+  }
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="max-w-2xl mx-auto space-y-8">
+    <div className="container mx-auto py-6 h-[calc(100vh-4rem)] flex flex-col">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">个人中心</h1>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>基本信息</CardTitle>
-            <CardDescription>您的账号基本资料</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={session.user.image || ""} />
-                <AvatarFallback className="text-xl">{session.user.name?.[0]?.toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="text-xl font-medium">{session.user.name}</h3>
-                <p className="text-sm text-muted-foreground">{session.user.email}</p>
-                <div className="mt-2">
-                  <Badge variant="outline">{role}</Badge>
+      </div>
+
+      <Tabs defaultValue="profile" className="flex-1 flex gap-6 overflow-hidden">
+        <TabsList className="flex flex-col w-64 h-full justify-start space-y-2 bg-muted/30 p-4 rounded-lg border">
+           <div className="w-full pb-4 mb-2 border-b">
+              <div className="flex items-center gap-3 px-2">
+                <Avatar className="h-10 w-10">
+                    <AvatarImage src={session.user.image || ""} />
+                    <AvatarFallback>{session.user.name?.[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="overflow-hidden">
+                    <p className="text-sm font-medium truncate">{session.user.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
                 </div>
               </div>
-            </div>
+           </div>
 
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">昵称</Label>
-                <Input value={session.user.name || ""} disabled className="col-span-3" />
+           <TabsTrigger value="profile" className="w-full justify-start px-3 py-2 h-auto data-[state=active]:bg-background">
+              <User className="mr-2 h-4 w-4" />
+              基本资料
+           </TabsTrigger>
+           <TabsTrigger value="wallet" className="w-full justify-start px-3 py-2 h-auto data-[state=active]:bg-background">
+              <Wallet className="mr-2 h-4 w-4" />
+              我的钱包
+           </TabsTrigger>
+           <TabsTrigger value="settings" className="w-full justify-start px-3 py-2 h-auto data-[state=active]:bg-background">
+              <Settings className="mr-2 h-4 w-4" />
+              阅读设置
+           </TabsTrigger>
+           <TabsTrigger value="security" className="w-full justify-start px-3 py-2 h-auto data-[state=active]:bg-background">
+              <Shield className="mr-2 h-4 w-4" />
+              账号安全
+           </TabsTrigger>
+
+           <div className="mt-auto pt-4 border-t w-full">
+              <form action={async () => {
+                "use server"
+                await signOut({ redirectTo: "/" })
+              }}>
+                <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50" type="submit">
+                  <LogOut className="mr-2 h-4 w-4" /> 退出登录
+                </Button>
+              </form>
+           </div>
+        </TabsList>
+        
+        <div className="flex-1 h-full overflow-hidden pb-10">
+           <TabsContent value="profile" className="mt-0 h-full">
+              <Card className="h-full flex flex-col">
+                <CardHeader>
+                  <CardTitle>基本资料</CardTitle>
+                  <CardDescription>查看和管理您的个人信息</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 flex-1 overflow-y-auto">
+                  <div className="flex items-center space-x-6">
+                    <Avatar className="h-24 w-24 border-2 border-muted">
+                      <AvatarImage src={session.user.image || ""} />
+                      <AvatarFallback className="text-2xl">{session.user.name?.[0]?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                         <h3 className="text-2xl font-semibold">{session.user.name}</h3>
+                         <Badge variant="secondary">{role}</Badge>
+                      </div>
+                      <p className="text-muted-foreground">{session.user.email}</p>
+                      <Button variant="outline" size="sm" className="mt-2" disabled>更换头像 (开发中)</Button>
+                    </div>
+                  </div>
+
+                  <ProfileForm user={session.user} />
+                </CardContent>
+              </Card>
+           </TabsContent>
+
+           <TabsContent value="wallet" className="mt-0 h-full">
+              <div className="h-full">
+                 <WalletCard initialBalance={shopSession.balance} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">邮箱</Label>
-                <Input value={session.user.email || ""} disabled className="col-span-3" />
+           </TabsContent>
+
+           <TabsContent value="settings" className="mt-0 h-full">
+              <div className="h-full">
+                <ReaderSettingsCard />
               </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline">编辑资料</Button>
-            <form action={async () => {
-              "use server"
-              await signOut({ redirectTo: "/" })
-            }}>
-              <Button variant="destructive" type="submit">
-                <LogOut className="mr-2 h-4 w-4" /> 退出登录
-              </Button>
-            </form>
-          </CardFooter>
-        </Card>
+           </TabsContent>
 
-        <ReaderSettingsCard />
-
-        <Card>
-            <CardHeader>
-                <CardTitle>账号安全</CardTitle>
-                <CardDescription>修改密码与安全设置</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button variant="outline">修改密码</Button>
-            </CardContent>
-        </Card>
-      </div>
+           <TabsContent value="security" className="mt-0 h-full">
+              <Card className="h-full flex flex-col">
+                  <CardHeader>
+                      <CardTitle>账号安全</CardTitle>
+                      <CardDescription>保护您的账号安全</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6 flex-1 overflow-y-auto">
+                      <div className="space-y-4">
+                          <h3 className="text-lg font-medium">修改密码</h3>
+                          <PasswordForm />
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                              <p className="font-medium">双重认证 (2FA)</p>
+                              <p className="text-sm text-muted-foreground">为您的账号添加一层额外的保护</p>
+                          </div>
+                          <Button variant="outline" disabled>暂未开放</Button>
+                      </div>
+                  </CardContent>
+              </Card>
+           </TabsContent>
+        </div>
+      </Tabs>
     </div>
   )
 }

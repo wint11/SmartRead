@@ -14,7 +14,7 @@ const initialState: ChapterFormState = {
   error: null,
 }
 
-export function EditForm({ novelId, chapter, onDelete }: { novelId: string, chapter: { id: string, title: string, content: string }, onDelete?: () => void }) {
+export function EditForm({ novelId, chapter, onDelete }: { novelId: string, chapter: { id: string, title: string, content: string, isVip?: boolean }, onDelete?: () => void }) {
   const [state, formAction, isPending] = useActionState(saveChapter, initialState)
   const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
@@ -22,10 +22,12 @@ export function EditForm({ novelId, chapter, onDelete }: { novelId: string, chap
   // Controlled inputs to allow updates if needed, though 'key' prop on parent usually handles reset
   const [title, setTitle] = useState(chapter.title)
   const [content, setContent] = useState(chapter.content)
+  const [isVip, setIsVip] = useState(chapter.isVip || false)
 
   useEffect(() => {
     setTitle(chapter.title)
     setContent(chapter.content)
+    setIsVip(chapter.isVip || false)
   }, [chapter])
 
   useEffect(() => {
@@ -99,6 +101,18 @@ export function EditForm({ novelId, chapter, onDelete }: { novelId: string, chap
             {state.error && typeof state.error === 'object' && state.error.content && (
               <p className="text-sm text-red-500">{state.error.content[0]}</p>
             )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isVip"
+              name="isVip"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              checked={isVip}
+              onChange={(e) => setIsVip(e.target.checked)}
+            />
+            <Label htmlFor="isVip">设置为 VIP 章节</Label>
           </div>
 
           {state.error && typeof state.error === 'string' && (

@@ -12,6 +12,7 @@ interface ReaderViewProps {
     title: string
     content: string
     order: number
+    isVip?: boolean
     novel: {
       id: string
       title: string
@@ -22,6 +23,7 @@ interface ReaderViewProps {
     title: string
     order: number
     content: string
+    isVip?: boolean
   }>
 }
 
@@ -90,13 +92,61 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
   const isSyncingNavRef = React.useRef(false)
   const isSyncingContentRef = React.useRef(false)
   const syncTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const prevScrollHeightRef = React.useRef(0)
+  const isPrependingRef = React.useRef(false)
+  const hasInitialScrolled = React.useRef(false)
+
+  // Initialize with surrounding chapters (e.g., +/- 2 chapters)
+  const getInitialChapters = () => {
+    const currentIndex = chapters.findIndex(c => c.id === chapter.id)
+    if (currentIndex === -1) return [chapter]
+
+    const start = Math.max(0, currentIndex - 2)
+    const end = Math.min(chapters.length, currentIndex + 3) // Exclusive end
+    
+    return chapters.slice(start, end).map(c => ({
+      ...c,
+      content: c.content || ""
+    }))
+  }
 
   const [loadedChapters, setLoadedChapters] = React.useState<Array<{
     id: string
     title: string
     content: string
     order: number
-  }>>([{ id: chapter.id, title: chapter.title, content: chapter.content, order: chapter.order }])
+    isVip?: boolean
+  }>>(getInitialChapters)
+
+  // Initial Scroll Position
+  React.useLayoutEffect(() => {
+    if (hasInitialScrolled.current) return
+    
+    const el = headingElsRef.current.get(chapter.id)
+    if (el) {
+       el.scrollIntoView({ behavior: "auto", block: "start" })
+       hasInitialScrolled.current = true
+    } else if (loadedChapters.length > 0 && loadedChapters[0].id === chapter.id) {
+        // If current is first loaded, and el is not ready (rare in useLayoutEffect), or just top
+        // contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" })
+        hasInitialScrolled.current = true
+    }
+  })
+
+  // Handle scroll adjustment after prepending chapters
+  React.useLayoutEffect(() => {
+    if (isPrependingRef.current) {
+      const scrollEl = contentScrollRef.current
+      if (scrollEl) {
+        const newScrollHeight = scrollEl.scrollHeight
+        const diff = newScrollHeight - prevScrollHeightRef.current
+        if (diff > 0) {
+            scrollEl.scrollTop += diff
+        }
+      }
+      isPrependingRef.current = false
+    }
+  }, [loadedChapters])
 
   // Constants for Chapter Tree
   const TREE_ITEM_HEIGHT = 32
@@ -268,18 +318,17 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
   
   React.useEffect(() => {
     // Reset when chapter prop changes (initial load of new page)
-    setLoadedChapters([{ id: chapter.id, title: chapter.title, content: chapter.content, order: chapter.order }])
+    setLoadedChapters(getInitialChapters())
+    hasInitialScrolled.current = false
     setHasMore(true)
     hasMoreRef.current = true
     hasPrevRef.current = true
-    lastChapterIdRef.current = chapter.id
-    firstChapterIdRef.current = chapter.id
+    // lastChapterIdRef/firstChapterIdRef will update in effect
     isLoadingNextRef.current = false
     setIsLoadingNext(false)
     isLoadingPrevRef.current = false
     
-    // Initial scroll to top
-    contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" })
+    // Initial scroll is handled by useLayoutEffect now
   }, [chapter.id, chapter.novel.id, chapter.title, chapter.content, chapter.order]) // minimal deps
 
   // Update refs when loadedChapters change
@@ -290,72 +339,87 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
 
   const loadNextChapter = React.useCallback(async () => {
     if (isLoadingNextRef.current || !hasMoreRef.current) return
-    const lastChapterId = lastChapterIdRef.current
-    if (!lastChapterId) return
-
+    
     isLoadingNextRef.current = true
     setIsLoadingNext(true)
     
-    // Find next chapter from props.chapters
-    const currentIndex = chapters.findIndex(c => c.id === lastChapterId)
-    const nextChapter = chapters[currentIndex + 1]
-
-    if (!nextChapter || !nextChapter.content) {
-      console.log("No next chapter or content missing")
-      setHasMore(false)
-      hasMoreRef.current = false
-      setIsLoadingNext(false)
-      isLoadingNextRef.current = false
-      return
-    }
-
-    // Simulate async slightly to not block UI thread instantly if heavy, 
-    // though with local data it's instant.
-    // We can just set it.
-    
     setLoadedChapters((prev) => {
-      if (prev.some((c) => c.id === nextChapter.id)) return prev
-      return [...prev, { ...nextChapter, content: nextChapter.content! }]
+        const lastId = prev[prev.length - 1].id
+        const currentIndex = chapters.findIndex(c => c.id === lastId)
+        const nextChapter = chapters[currentIndex + 1]
+
+        if (!nextChapter || !nextChapter.content) {
+            console.log("No next chapter or content missing")
+            // We can't update hasMoreRef directly inside, but we can detect it later
+            // For now, just return prev
+            return prev
+        }
+
+        if (prev.some((c) => c.id === nextChapter.id)) return prev
+        return [...prev, { ...nextChapter, content: nextChapter.content! }]
     })
 
+    // Update flags based on new state in next render or just assume done
     setIsLoadingNext(false)
     isLoadingNextRef.current = false
-  }, [chapters])
+    
+    // Check if we reached end
+    const lastId = loadedChapters[loadedChapters.length - 1]?.id
+    const currentIndex = chapters.findIndex(c => c.id === lastId)
+    if (currentIndex >= chapters.length - 1) {
+        setHasMore(false)
+        hasMoreRef.current = false
+    }
+  }, [chapters, loadedChapters])
 
   const loadPrevChapter = React.useCallback(async () => {
     if (isLoadingPrevRef.current || !hasPrevRef.current) return
-    const firstChapterId = firstChapterIdRef.current
-    if (!firstChapterId) return
-
+    
+    console.log("Loading prev chapter...")
     isLoadingPrevRef.current = true
     
-    // Find prev chapter
-    const currentIndex = chapters.findIndex(c => c.id === firstChapterId)
-    const prevChapter = chapters[currentIndex - 1]
-
-    if (!prevChapter || !prevChapter.content) {
-      hasPrevRef.current = false
-      isLoadingPrevRef.current = false
-      return
-    }
-
-    const scrollEl = contentScrollRef.current
-    const prevScrollHeight = scrollEl?.scrollHeight ?? 0
-    const prevScrollTop = scrollEl?.scrollTop ?? 0
-
     setLoadedChapters((prev) => {
-      if (prev.some((c) => c.id === prevChapter.id)) return prev
-      return [{ ...prevChapter, content: prevChapter.content! }, ...prev]
-    })
+        const firstId = prev[0].id
+        const currentIndex = chapters.findIndex(c => c.id === firstId)
+        console.log("Current first:", firstId, "Index:", currentIndex)
+        const prevChapter = chapters[currentIndex - 1]
 
-    requestAnimationFrame(() => {
-      if (!scrollEl) return
-      const nextScrollHeight = scrollEl.scrollHeight
-      scrollEl.scrollTop = prevScrollTop + (nextScrollHeight - prevScrollHeight)
+        if (!prevChapter || !prevChapter.content) {
+            console.log("No prev chapter")
+            hasPrevRef.current = false
+            // Force update to trigger effect and unlock
+            return [...prev]
+        }
+
+        if (prev.some(c => c.id === prevChapter.id)) {
+            console.log("Duplicate prev chapter")
+            // Force update to trigger effect and unlock
+            return [...prev]
+        }
+
+        console.log("Adding prev chapter:", prevChapter.title)
+
+        // Capture scroll height for adjustment
+        const scrollEl = contentScrollRef.current
+        if (scrollEl) {
+            prevScrollHeightRef.current = scrollEl.scrollHeight
+            isPrependingRef.current = true
+        }
+
+        return [{ ...prevChapter, content: prevChapter.content! }, ...prev]
     })
-    
-    isLoadingPrevRef.current = false
   }, [chapters])
+
+  // Reset loading flags after render
+  React.useEffect(() => {
+      // Delay unlocking to ensure IntersectionObserver has time to update its state
+      // after the scroll adjustment (useLayoutEffect) has moved the sentinel out of view.
+      const timer = setTimeout(() => {
+          isLoadingNextRef.current = false
+          isLoadingPrevRef.current = false
+      }, 500)
+      return () => clearTimeout(timer)
+  }, [loadedChapters])
 
   // 4. Scroll Event Listener (Backup for IntersectionObserver)
   const handleScroll = React.useCallback(() => {
@@ -371,14 +435,17 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
       }
     }
     
-    // Also check for prev loading
-    if (scrollTop < 500) { // Increased threshold for better experience
+    // Disabled manual prev loading to avoid conflict with IntersectionObserver
+    // and double-triggering issues.
+    /*
+    if (scrollTop < 500) { 
        if (!isLoadingPrevRef.current && hasPrevRef.current) {
          console.log("Scroll trigger loading prev")
          loadPrevChapter()
        }
     }
-  }, [loadNextChapter, loadPrevChapter])
+    */
+  }, [loadNextChapter])
 
   // Observers for Infinite Scroll
   React.useEffect(() => {
@@ -407,10 +474,17 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) loadPrevChapter()
       },
-      { root: null, rootMargin: "800px 0px 0px 0px", threshold: 0 }
+      { root: null, rootMargin: "100px 0px 0px 0px", threshold: 0 }
     )
-    observer.observe(el)
-    return () => observer.disconnect()
+    // Delay observation to avoid initial trigger on fresh load
+    const timer = setTimeout(() => {
+        observer.observe(el)
+    }, 1000)
+    
+    return () => {
+        clearTimeout(timer)
+        observer.disconnect()
+    }
   }, [loadPrevChapter])
 
   if (!mounted) {
@@ -583,15 +657,43 @@ export function ReaderView({ chapter, chapters }: ReaderViewProps) {
                          </span>
                     </div>
                     
-                    <div
-                      className={cn(
-                        "whitespace-pre-wrap leading-loose tracking-wide font-sans text-justify",
-                        currentTheme.text
-                      )}
-                      style={{ fontSize: `${fontSize}px`, lineHeight: "1.8" }}
-                    >
-                      {c.content}
-                    </div>
+                    {c.isVip ? (
+                      <div className="relative paywall-container">
+                        <div 
+                          className={cn(
+                             "paywall-blur select-none pointer-events-none whitespace-pre-wrap leading-loose tracking-wide font-sans text-justify",
+                             currentTheme.text
+                          )}
+                          style={{ fontSize: `${fontSize}px`, lineHeight: "1.8" }}
+                        >
+                           {c.content}
+                        </div>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[2px] z-10 paywall-overlay">
+                           <div className="text-2xl font-bold mb-2">🔒 VIP 章节</div>
+                           <div className="text-muted-foreground">请购买“会员”以继续阅读。</div>
+                           <div style={{ fontSize: '12px', marginTop: '20px', color: '#666' }}>(价格: 198 金币)</div>
+                        </div>
+                      </div>
+                    ) : c.content.includes("paywall-container") ? (
+                      <div
+                        className={cn(
+                          "leading-loose tracking-wide font-sans text-justify",
+                          currentTheme.text
+                        )}
+                        style={{ fontSize: `${fontSize}px`, lineHeight: "1.8" }}
+                        dangerouslySetInnerHTML={{ __html: c.content }}
+                      />
+                    ) : (
+                      <div
+                        className={cn(
+                          "whitespace-pre-wrap leading-loose tracking-wide font-sans text-justify",
+                          currentTheme.text
+                        )}
+                        style={{ fontSize: `${fontSize}px`, lineHeight: "1.8" }}
+                      >
+                        {c.content}
+                      </div>
+                    )}
                     
                     <div className={cn("mt-12 h-px w-full", theme === "dark" ? "bg-zinc-800" : "bg-zinc-200")} />
                   </div>

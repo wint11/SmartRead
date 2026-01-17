@@ -85,7 +85,8 @@ async function main() {
       category: '玄幻',
       type: 'NOVEL',
       coverUrl: 'https://placehold.co/400x600/png?text=DouPo',
-      status: 'COMPLETED',
+      status: 'PUBLISHED',
+      serializationStatus: 'COMPLETED',
       rating: 4.8,
       views: 1000000,
       uploaderId: author.id,
@@ -94,28 +95,7 @@ async function main() {
           title: `第${i + 1}章 陨落的天才`,
           content: generateLongContent(`第${i + 1}章`),
           order: i + 1,
-        })),
-      },
-    },
-  })
-
-  await prisma.novel.create({
-    data: {
-      title: '诡秘之主',
-      author: '爱潜水的乌贼',
-      description: '蒸汽与机械的浪潮中，谁能触及非凡？历史和黑暗的迷雾里，又是谁在耳语？',
-      category: '奇幻',
-      type: 'NOVEL',
-      coverUrl: 'https://placehold.co/400x600/png?text=LOTM',
-      status: 'COMPLETED',
-      rating: 4.9,
-      views: 2000000,
-      uploaderId: author.id,
-      chapters: {
-        create: Array.from({ length: 15 }).map((_, i) => ({
-          title: `第${i + 1}章 绯红`,
-          content: generateLongContent(`第${i + 1}章`),
-          order: i + 1,
+          status: 'PUBLISHED',
         })),
       },
     },
@@ -136,9 +116,9 @@ async function main() {
       uploaderId: researcher.id,
       chapters: {
         create: [
-          { title: 'Abstract', content: 'The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...', order: 1 },
-          { title: 'Introduction', content: 'Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular, have been firmly established as state of the art...', order: 2 },
-          { title: 'Model Architecture', content: 'Most competitive neural sequence transduction models have an encoder-decoder structure...', order: 3 },
+          { title: 'Abstract', content: 'The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...', order: 1, status: 'PUBLISHED' },
+          { title: 'Introduction', content: 'Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular, have been firmly established as state of the art...', order: 2, status: 'PUBLISHED' },
+          { title: 'Model Architecture', content: 'Most competitive neural sequence transduction models have an encoder-decoder structure...', order: 3, status: 'PUBLISHED' },
         ]
       },
     },
@@ -162,16 +142,93 @@ async function main() {
           title: `第${i + 1}章 我的童年`,
           content: generateLongContent(`第${i + 1}章`),
           order: i + 1,
+          status: 'PUBLISHED',
         })),
       },
     },
   })
 
-  console.log('数据生成完成！')
-  console.log('测试账号:')
-  console.log('管理员: admin@example.com / 123456')
-  console.log('作者: author@example.com / 123456')
-  console.log('读者: user@example.com / 123456')
+  // Create LOTM (Lord of the Mysteries) for CTF
+  await prisma.novel.create({
+    data: {
+      id: 'cmkccv5w2000r102bpmjww5wu', // Hardcoded ID for CTF
+      title: '诡秘之主', // Renamed back to original
+      author: '爱潜水的乌贼',
+      description: '醒来面对一串谜团，周明瑞发现自己转世为克莱恩·莫雷蒂，身处一个维多利亚时代的平行世界，那里充满了机械、大炮、无畏舰、飞艇和差分机，还有魔药、占卜、咒语、塔罗牌、封印物……',
+      category: '玄幻',
+      type: 'NOVEL',
+      coverUrl: 'https://placehold.co/400x600/png?text=LOTM', // Replaced with placeholder
+      status: 'PUBLISHED',
+      serializationStatus: 'SERIALIZING',
+      rating: 5.0,
+      views: 9999999,
+      uploaderId: author.id,
+      chapters: {
+        create: [
+          {
+             id: 'lotm-chapter-1',
+             title: '第一章 绯红',
+             order: 1,
+             status: 'PUBLISHED',
+             content: `痛，好痛，头好痛……
+
+             周明瑞艰难地睁开眼睛，发现自己正处于一个陌生的房间。
+
+             （免费章节内容……）`
+          },
+          {
+             id: 'lotm-chapter-2',
+             title: '第二章 占卜 (VIP)',
+             order: 2,
+             status: 'PUBLISHED',
+             isVip: true,
+             content: `克莱恩从口袋里掏出一枚银币。那是一张四分之一磅的纸币。
+“不属于这个时代的愚者……”
+他诵念着那尊名。
+突然，灰雾升起。
+灰雾之上，一座宏伟的宫殿显现。
+他坐在青铜长桌的首席。
+等等，椅背上刻着什么？
+flag{paywalls_are_just_css_illusions_7733}
+他揉了揉眼睛，刻痕消失了。`
+          },
+          {
+             id: 'lotm-chapter-3',
+             title: '第三章 占卜家',
+             order: 3,
+             status: 'PUBLISHED',
+             content: '敬请期待……'
+          }
+        ]
+      }
+    }
+  })
+
+  // Create another Novel to ensure >5
+  await prisma.novel.create({
+    data: {
+      title: '三体',
+      author: '刘慈欣',
+      description: '文化大革命如火如荼进行的同时，军方探寻外星文明的绝秘计划“红岸工程”取得了突破性进展……',
+      category: '科幻',
+      type: 'NOVEL',
+      coverUrl: 'https://placehold.co/400x600/png?text=ThreeBody',
+      status: 'PUBLISHED',
+      rating: 5.0,
+      views: 1500000,
+      uploaderId: author.id,
+      chapters: {
+        create: Array.from({ length: 10 }).map((_, i) => ({
+          title: `第${i + 1}章 科学边界`,
+          content: generateLongContent(`第${i + 1}章`),
+          order: i + 1,
+          status: 'PUBLISHED',
+        })),
+      },
+    },
+  })
+
+  console.log('数据重置完成！')
 }
 
 main()

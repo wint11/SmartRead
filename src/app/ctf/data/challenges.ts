@@ -67,6 +67,8 @@ export const STANDARD_TASKS: Challenge[] = [
     { id: 100, title: "Ghost Mode", description: "Find the hidden 'Ghost Mode' in the novel reader.", hint: "See the unseen in the reader.", points: 50, category: 'misc' },
     { id: 103, title: "The Infinite Story", description: "Contribute to the never-ending story.", hint: "Find the book that writes itself.", points: 50, category: 'misc' },
     { id: 120, title: "Time Rift", description: "Stabilize the corrupted timeline and escape with the data.", hint: "Escape the collapsing timeline.", points: 50, category: 'misc' },
+    { id: 121, title: "Paywall Illusion", description: "Bypass the VIP restriction in 'Lord of the Mysteries'.", hint: "Inspect the elements carefully.", points: 50, category: 'web' },
+    { id: 122, title: "I am a Billionaire", description: "Buy the 'Book of Wisdom' from the Wallet Shop.", hint: "Modify your session to become rich.", points: 50, category: 'web' },
 ];
 
 export const ROOT_TASKS: Challenge[] = [

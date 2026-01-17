@@ -11,6 +11,7 @@ const chapterSchema = z.object({
   content: z.string().min(10, "内容至少10个字"),
   novelId: z.string().min(1, "作品ID不能为空"),
   status: z.enum(['DRAFT', 'PENDING']),
+  isVip: z.boolean().optional(),
 })
 
 export type ChapterFormState = {
@@ -33,6 +34,7 @@ export async function saveChapter(prevState: ChapterFormState, formData: FormDat
     content: formData.get('content'),
     novelId: formData.get('novelId'),
     status: formData.get('action') === 'publish' ? 'PENDING' : 'DRAFT',
+    isVip: formData.get('isVip') === 'on',
   }
 
   const validated = chapterSchema.safeParse(rawData)
@@ -40,7 +42,7 @@ export async function saveChapter(prevState: ChapterFormState, formData: FormDat
     return { error: validated.error.flatten().fieldErrors }
   }
 
-  const { id, title, content, novelId, status } = validated.data
+  const { id, title, content, novelId, status, isVip } = validated.data
 
   // Verify ownership
   const novel = await prisma.novel.findFirst({
@@ -64,6 +66,7 @@ export async function saveChapter(prevState: ChapterFormState, formData: FormDat
           title,
           content,
           status,
+          isVip,
         }
       })
     } else {
@@ -81,6 +84,7 @@ export async function saveChapter(prevState: ChapterFormState, formData: FormDat
           order,
           novelId,
           status,
+          isVip,
         }
       })
     }

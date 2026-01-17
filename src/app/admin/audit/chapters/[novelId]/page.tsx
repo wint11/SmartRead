@@ -64,6 +64,7 @@ export default async function ChapterAuditDetailPage({ params }: { params: Promi
                                 <div className="flex items-center gap-4">
                                     <span>{chapter.title}</span>
                                     <Badge variant="outline">第 {chapter.order} 章</Badge>
+                                    {(chapter as any).isVip && <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200">VIP</Badge>}
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent>

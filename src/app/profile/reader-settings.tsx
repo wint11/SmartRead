@@ -49,12 +49,12 @@ export function ReaderSettingsCard() {
   if (!mounted) return null
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>阅读设置</CardTitle>
         <CardDescription>这里的设置会同步到阅读页</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 flex-1 overflow-y-auto">
         <div className="grid gap-2">
           <Label>背景主题</Label>
           <Select value={theme} onValueChange={updateTheme}>

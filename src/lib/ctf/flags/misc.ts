@@ -14,6 +14,8 @@ export const MISC_FLAGS = {
   100: "flag{y0u_h4v3_th3_3y3s_0f_7ru7h}", // Ghost Mode
   103: "flag{collective_consciousness_writer}", // Infinite Story
   120: "flag{run_lola_run_404}", // Time Traveler (Time Rift)
+  121: "flag{paywalls_are_just_css_illusions_7733}", // Paywall Illusion
+  122: "flag{money_makes_the_world_go_round_8888}", // I am a Billionaire
 } as const
 
 export const MISC_HINTS = {
@@ -30,5 +32,8 @@ export const MISC_HINTS = {
   51: "Extract the backup archive.",
   99: "Launch the snake protocol.",
   100: "See the unseen in the reader.",
+  103: "Find the book that writes itself.",
   120: "Escape the collapsing timeline.",
+  121: "Inspect the elements carefully.",
+  122: "Modify your session to become rich.",
 } as const
