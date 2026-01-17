@@ -156,7 +156,8 @@ export function useCtfGame() {
         isSnakeActive,
         setSnakeActive,
         resetGame,
-        clearHistory
+        clearHistory,
+        execute
     };
 
     await executeCommand(command, args, context);
@@ -308,6 +309,17 @@ export function useCtfGame() {
     }
   }
 
+  // Expose processCommand for external use (e.g. Desktop Terminal)
+  const execute = async (cmdLine: string) => {
+      const [cmd, ...args] = cmdLine.trim().split(' ')
+      if (!cmd) return
+      
+      addToHistory('input', cmdLine)
+      setIsProcessing(true)
+      await processCommand(cmd, args)
+      setIsProcessing(false)
+  }
+
   return {
     history,
     input,
@@ -325,6 +337,10 @@ export function useCtfGame() {
     currentPath,
     currentUser,
     isSnakeActive,
-    setSnakeActive
+    setSnakeActive,
+    fileSystem, // Add fileSystem to the return object
+    sudoFailCount, // Add sudoFailCount to the return object
+    execute,
+    clearHistory
   }
 }

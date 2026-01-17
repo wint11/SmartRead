@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Folder, FileText, Gamepad2, AlertTriangle, HardDrive, Monitor } from "lucide-react"
+import { Folder, FileText, Gamepad2, AlertTriangle, HardDrive, Monitor, Globe, Terminal } from "lucide-react"
 
 interface OSDesktopIconProps {
   label: string
@@ -24,6 +24,9 @@ export function OSDesktopIcon({
   const getIcon = () => {
     if (icon === 'gamepad') return <Gamepad2 className="w-8 h-8 text-purple-600" />
     if (icon === 'computer') return <Monitor className="w-8 h-8 text-blue-300" />
+    if (icon === 'globe') return <Globe className="w-8 h-8 text-cyan-400" />
+    if (icon === 'terminal') return <Terminal className="w-8 h-8 text-green-500 bg-black p-0.5 rounded" />
+    if (icon === 'recycle-bin') return <div className="w-8 h-8 text-green-300 border-2 border-green-300 rounded flex items-center justify-center font-bold text-xs">RB</div>
     
     switch (type) {
       case 'folder':

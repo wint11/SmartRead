@@ -1,17 +1,58 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { FileSystemNode, initialFileSystem } from "../../components/file-system"
 import { Folder, FileText, ArrowLeft, Gamepad2, HardDrive, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AppProps } from "../types"
+import { useCTF } from "@/app/ctf/context/game-context"
+import { adapterCtfToDesktop } from "../../utils/fs-adapter"
 
 export function FileExplorerApp({ file, launchApp }: AppProps) {
+  const { fileSystem: ctfFS } = useCTF()
+  
+  // Convert live CTF FS to Desktop FS format
+  // We memoize this to prevent flickering, but it depends on ctfFS changes
+  const liveRoot = useMemo(() => adapterCtfToDesktop(ctfFS), [ctfFS])
+  
   // Start from the provided file (folder) or root
-  const initialNode = file || initialFileSystem[0]
+  // If file is provided (e.g. shortcut), we try to find it in the new live tree, 
+  // otherwise default to root
+  const initialNode = file || { id: 'root', name: 'My Computer', type: 'folder', children: liveRoot }
   
   const [currentPath, setCurrentPath] = useState<FileSystemNode[]>([initialNode])
-  const currentNode = currentPath[currentPath.length - 1]
+  
+  // If we are at root, we use liveRoot. Otherwise use the children of current node.
+  // We need to re-find the current node in the live tree to get updates.
+  // Ensure we always have a valid current node
+  const currentNode = currentPath[currentPath.length - 1] || initialNode
+  
+  // Helper to find node in tree
+  const findNodeInTree = (nodes: FileSystemNode[], id: string): FileSystemNode | undefined => {
+      for (const node of nodes) {
+          if (node.id === id) return node;
+          if (node.children) {
+              const found = findNodeInTree(node.children, id);
+              if (found) return found;
+          }
+      }
+      return undefined;
+  }
+
+  // Get display items
+  let displayItems: FileSystemNode[] = []
+  if (!currentNode) {
+      displayItems = liveRoot
+  } else if (currentNode.id === 'root' || currentNode.id === 'my_computer') {
+      displayItems = liveRoot
+  } else {
+      // Try to find the current node in the live tree to get latest children
+      // Note: adapter generates IDs based on path, so they should be stable
+      const liveNode = findNodeInTree(liveRoot, currentNode.id)
+      // If live node not found (deleted?), fallback to empty or stay on current if static
+      displayItems = liveNode?.children || currentNode.children || []
+  }
+
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const handleNavigateUp = () => {
@@ -77,7 +118,7 @@ export function FileExplorerApp({ file, launchApp }: AppProps) {
 
       {/* File Grid */}
       <div className="flex-1 p-2 grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] content-start gap-2 overflow-auto">
-        {currentNode.children?.map(node => (
+        {displayItems.map(node => (
           <div
             key={node.id}
             className={cn(
@@ -97,7 +138,7 @@ export function FileExplorerApp({ file, launchApp }: AppProps) {
           </div>
         ))}
         
-        {(!currentNode.children || currentNode.children.length === 0) && (
+        {(displayItems.length === 0) && (
           <div className="col-span-full text-center text-gray-400 text-sm mt-8">
             This folder is empty.
           </div>
@@ -106,7 +147,7 @@ export function FileExplorerApp({ file, launchApp }: AppProps) {
       
       {/* Status Bar */}
       <div className="border-t border-gray-300 p-1 bg-gray-100 text-xs text-gray-600">
-        {currentNode.children?.length || 0} object(s)
+        {displayItems.length} object(s)
       </div>
     </div>
   )

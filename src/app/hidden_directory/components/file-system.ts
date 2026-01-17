@@ -196,6 +196,20 @@ const desktop: FileSystemNode = {
           icon: 'gamepad'
         }
       ]
+    },
+    {
+      id: 'netscape_shortcut',
+      name: 'Netscape',
+      type: 'app',
+      appId: 'browser',
+      icon: 'globe'
+    },
+    {
+      id: 'terminal_shortcut',
+      name: 'Terminal',
+      type: 'app',
+      appId: 'terminal',
+      icon: 'terminal'
     }
   ]
 };

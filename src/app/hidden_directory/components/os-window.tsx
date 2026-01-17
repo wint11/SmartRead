@@ -42,9 +42,21 @@ export function OSWindow({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        let newX = e.clientX - dragOffset.x
+        let newY = e.clientY - dragOffset.y
+        
+        // Simple constraint to keep title bar somewhat visible
+        // Allow dragging off-screen partially, but keep at least 50px visible horizontally
+        // and keep top visible
+        const maxX = window.innerWidth - 50
+        const maxY = window.innerHeight - 50
+        
+        newX = Math.max(-size.width + 50, Math.min(newX, maxX))
+        newY = Math.max(0, Math.min(newY, maxY))
+        
         setPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y
+          x: newX,
+          y: newY
         })
       }
     }

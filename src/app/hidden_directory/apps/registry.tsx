@@ -3,6 +3,9 @@ import { FileExplorerApp } from "./file-explorer"
 import { NotepadApp } from "./notepad"
 import { DoomApp } from "./doom"
 import { MinesweeperApp } from "./minesweeper"
+import { TerminalApp } from "./terminal"
+import { BrowserApp } from "./browser"
+import { ImageViewerApp } from "./image-viewer"
 
 export const APP_REGISTRY: Record<string, AppConfig> = {
   'explorer': {
@@ -37,6 +40,30 @@ export const APP_REGISTRY: Record<string, AppConfig> = {
     defaultWidth: 350,
     defaultHeight: 450,
     resizable: false
+  },
+  'terminal': {
+    id: 'terminal',
+    name: 'Terminal',
+    icon: 'terminal',
+    component: TerminalApp,
+    defaultWidth: 600,
+    defaultHeight: 400
+  },
+  'browser': {
+    id: 'browser',
+    name: 'Netscape',
+    icon: 'globe',
+    component: BrowserApp,
+    defaultWidth: 800,
+    defaultHeight: 600
+  },
+  'image-viewer': {
+    id: 'image-viewer',
+    name: 'Image Viewer',
+    icon: 'image',
+    component: ImageViewerApp,
+    defaultWidth: 500,
+    defaultHeight: 500
   }
 }
 

@@ -290,6 +290,20 @@ Welcome to the SmartRead CTF Challenge! This guide provides step-by-step instruc
       6. Re-encode and update the cookie.
     - Flag: `flag{money_makes_the_world_go_round_8888}`
 
+55. **Web Pioneer (Hidden OS)**
+    - **Access**: Boot into the Hidden OS (`/hidden_directory`).
+    - **Goal**: Open the **Browser** app (Netscape). Navigate to `http://info.cern.ch`.
+    - **Method**: Find the hidden red dot in the footer (bottom right corner). Click it to access secret dev notes.
+    - Flag: `flag{web_pioneer_tim_bl}`
+
+56. **Internal Breach (Hidden OS)**
+    - **Access**: Boot into the Hidden OS (`/hidden_directory`).
+    - **Goal**: Open the **Browser** app. Navigate to `http://internal.portal`.
+    - **Method**: Log in to the Admin Dashboard.
+      - Username: `admin` (Fixed)
+      - Password: `' OR '1'='1` (SQL Injection)
+    - Flag: `flag{sql_injection_master_class}`
+
 ---
 
 ## 🛠 Developer Guide: How to Add a New Flag

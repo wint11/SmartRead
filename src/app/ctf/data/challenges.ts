@@ -35,6 +35,8 @@ export const STANDARD_TASKS: Challenge[] = [
     { id: 14, title: "User Agent", description: "Spoof your User-Agent string to look like a mobile device.", hint: "Use the correct User-Agent.", points: 30, category: 'web' },
     { id: 21, title: "Hidden Leaderboard", description: "Find the secret leaderboard page.", hint: "Find the hidden question mark.", points: 40, category: 'web' },
     { id: 23, title: "JWT Manipulation", description: "Forge a JWT token to gain admin privileges.", hint: "Modify your session token.", points: 50, category: 'web' },
+    { id: 130, title: "Web Pioneer", description: "Find the secret development notes in the First Website.", hint: "Find the hidden link in the first website.", points: 50, category: 'web' },
+    { id: 131, title: "Internal Breach", description: "Gain admin access to the Intranet Portal.", hint: "Bypass the login in the internal portal.", points: 50, category: 'web' },
 
     // System Challenges
     { id: 11, title: "Buffer Overflow", description: "Trigger a buffer overflow in the vulnerable binary.", hint: "Try to overflow the buffer.", points: 30, category: 'system' },

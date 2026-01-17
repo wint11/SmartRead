@@ -35,6 +35,16 @@ export function StartMenu({ isOpen, onClose, onLaunch, onShutdown }: StartMenuPr
             label="Notepad" 
             onClick={() => onLaunch('notepad')} 
           />
+          <MenuItem 
+            icon={<div className="w-6 h-6 flex items-center justify-center font-bold text-xs bg-black text-green-500 border border-gray-500">{'>_'}</div>} 
+            label="Terminal" 
+            onClick={() => onLaunch('terminal')} 
+          />
+          <MenuItem 
+            icon={<div className="w-6 h-6 flex items-center justify-center font-serif font-bold text-blue-800 text-lg">N</div>} 
+            label="Netscape" 
+            onClick={() => onLaunch('browser')} 
+          />
           
           <div className="h-[1px] bg-gray-400 border-b border-white my-1 mx-1" />
           
@@ -65,16 +75,18 @@ function MenuItem({
   icon, 
   label, 
   onClick, 
-  hasSubmenu = false 
+  hasSubmenu = false,
+  children
 }: { 
   icon: React.ReactNode
   label: string
   onClick?: () => void
   hasSubmenu?: boolean
+  children?: React.ReactNode
 }) {
   return (
     <div 
-      className="flex items-center gap-3 px-3 py-2 hover:bg-[#000080] hover:text-white cursor-pointer group"
+      className="relative flex items-center gap-3 px-3 py-2 hover:bg-[#000080] hover:text-white cursor-pointer group"
       onClick={onClick}
     >
       <div className="w-6 h-6 flex items-center justify-center">
@@ -82,6 +94,13 @@ function MenuItem({
       </div>
       <span className="flex-1 text-sm">{label}</span>
       {hasSubmenu && <ChevronRight className="w-4 h-4 text-black group-hover:text-white" />}
+      
+      {/* Submenu */}
+      {hasSubmenu && (
+        <div className="hidden group-hover:block">
+          {children}
+        </div>
+      )}
     </div>
   )
 }

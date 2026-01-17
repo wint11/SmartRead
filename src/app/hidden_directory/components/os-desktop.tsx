@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { OSBootScreen } from "./os-boot-screen"
 import { OSWindow } from "./os-window"
@@ -11,6 +11,8 @@ import { AppProps } from "../apps/types"
 import { StartMenu } from "./start-menu"
 import { useSystemInterceptors } from "../hooks/use-system-interceptors"
 import { ContextMenu } from "./context-menu"
+import { useCTF } from "@/app/ctf/context/game-context"
+import { adapterCtfToDesktop } from "../utils/fs-adapter"
 
 interface WindowState {
   id: string
@@ -33,11 +35,34 @@ export function OSDesktop() {
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false)
   const [showShutdown, setShowShutdown] = useState(false)
   const startButtonRef = useRef<HTMLButtonElement>(null)
+  const hasShownWelcome = useRef(false)
   
   const { contextMenu, closeContextMenu } = useSystemInterceptors()
+  const { fileSystem: ctfFS } = useCTF()
 
-  // Find the desktop folder
-  const desktopFolder = initialFileSystem[0]?.children?.find(c => c.id === 'desktop')
+  // Unified Desktop Content:
+  // 1. Live CTF data from /home/ctf/Desktop (if exists)
+  // 2. Standard shortcuts (My Computer, Recycle Bin, etc.)
+  const desktopItems = useMemo(() => {
+      const ctfRoot = adapterCtfToDesktop(ctfFS)
+      
+      // Standard shortcuts
+      const shortcuts: FileSystemNode[] = [
+          {id: 'my_computer', name: 'My Computer', type: 'app', appId: 'explorer', icon: 'computer'},
+          {id: 'recycle_bin', name: 'Recycle Bin', type: 'folder', icon: 'recycle-bin', children: []},
+          {id: 'netscape_shortcut', name: 'Netscape', type: 'app', appId: 'browser', icon: 'globe'},
+          {id: 'terminal_shortcut', name: 'Terminal', type: 'app', appId: 'terminal', icon: 'terminal'}
+      ]
+
+      // Try to find /home/ctf/Desktop
+      const home = ctfRoot.find(n => n.name === 'home')
+      const ctfUser = home?.children?.find(n => n.name === 'ctf')
+      const desktop = ctfUser?.children?.find(n => n.name === 'Desktop')
+      
+      const liveItems = desktop?.children || []
+      
+      return [...shortcuts, ...liveItems]
+  }, [ctfFS])
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -113,7 +138,10 @@ export function OSDesktop() {
     } else if (node.type === 'app') {
       if (node.appId === 'explorer' && node.id === 'my_computer') {
         // Special case: My Computer shortcut opens the root
-        launchApp('explorer', initialFileSystem[0])
+        // We need to pass the LIVE root from context
+        const ctfRoot = adapterCtfToDesktop(ctfFS)
+        const rootNode = { id: 'root', name: 'My Computer', type: 'folder', children: ctfRoot } as FileSystemNode
+        launchApp('explorer', rootNode)
       } else if (node.appId) {
         launchApp(node.appId, node)
       }
@@ -167,7 +195,7 @@ export function OSDesktop() {
     >
       {/* Desktop Icons */}
       <div className="absolute top-0 left-0 p-4 flex flex-col gap-4 flex-wrap content-start h-[calc(100%-48px)]">
-        {desktopFolder?.children?.map(node => (
+        {desktopItems.map(node => (
           <OSDesktopIcon
             key={node.id}
             label={node.name}

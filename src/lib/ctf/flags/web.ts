@@ -11,6 +11,8 @@ export const WEB_FLAGS = {
   14: "flag{user_agent_spoofing_is_easy_1199}", // User Agent
   21: "flag{leaderboard_hunter_rank_1_8899}", // Hidden Leaderboard
   23: "flag{jwt_token_spoofing_master_7744}", // JWT Manipulation
+  130: "flag{web_pioneer_tim_bl}", // CERN Secret
+  131: "flag{sql_injection_master_class}", // Internal Portal Admin
 } as const
 
 export const WEB_HINTS = {
@@ -26,4 +28,6 @@ export const WEB_HINTS = {
   14: "Use the correct User-Agent.",
   21: "Find the hidden question mark.",
   23: "Modify your session token.",
+  130: "Find the hidden link in the first website.",
+  131: "Bypass the login in the internal portal.",
 } as const
